@@ -2,8 +2,52 @@
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 <h1>Dashboard</h1>
-<section class="card" aria-labelledby="empty-title">
-  <h2 id="empty-title">No monitors yet</h2>
-  <p>Monitoring careers pages arrives in a later release.</p>
+
+<section class="stats" aria-label="Summary">
+  <div class="stat"><span class="stat-value">{% include "partials/unseen_count.html" %}</span><span class="stat-label">new match{{ "es" if unseen != 1 }}</span></div>
+  <div class="stat"><span class="stat-value">{{ enabled_count }}</span><span class="stat-label">active monitor{{ "s" if enabled_count != 1 }}{% if monitor_count != enabled_count %} ({{ monitor_count - enabled_count }} paused){% endif %}</span></div>
+  <div class="stat"><span class="stat-value">{{ last_check | relative }}</span><span class="stat-label">last check</span></div>
 </section>
+
+{% if attention %}
+<section class="card card-warning" aria-labelledby="attention-title">
+  <h2 id="attention-title">Needs attention</h2>
+  <ul class="plain-list">
+    {% for monitor in attention %}
+    <li>
+      <a href="/monitors/{{ monitor.id }}">{{ monitor.name }}</a>:
+      <span class="status status-{{ monitor.last_status | status_tone }}">{{ monitor.last_status | status_label }}</span>
+      {% if monitor.last_error %}<span class="muted">{{ monitor.last_error | truncate(140) }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if monitor_count == 0 %}
+<section class="card empty-state" aria-labelledby="empty-title">
+  <h2 id="empty-title">Start by adding a careers page</h2>
+  <p>Paste the address of a company's jobs page, choose what you're looking for, and Job Monitor will check it for new postings.</p>
+  <p><a class="button" href="/monitors/new">Add a monitor</a></p>
+</section>
+{% else %}
+<section aria-labelledby="matches-title" class="stack-section">
+  <div class="section-head">
+    <h2 id="matches-title">New matches</h2>
+    {% if matches %}
+    <form method="post" action="/matches/seen-all">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="button button-small button-secondary">Mark all seen</button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="match-list" aria-live="polite">
+    {% for match in matches %}
+      {% with context = "dashboard" %}{% include "partials/match_card.html" %}{% endwith %}
+    {% else %}
+      <p class="card empty-state">No new matches. Checks run on schedule; see <a href="/monitors">your monitors</a> or <a href="/matches?state=all">all past matches</a>.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}

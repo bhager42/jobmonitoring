@@ -2,6 +2,7 @@
 {% block title %}Settings{% endblock %}
 {% block content %}
 <h1>Settings</h1>
+<div class="grid-2">
 <section class="card" aria-labelledby="password-title">
   <h2 id="password-title">Change password</h2>
   {% if changed %}
@@ -28,4 +29,27 @@
     <button type="submit" class="button">Change password</button>
   </form>
 </section>
+
+<div class="stack-section">
+<section class="card" aria-labelledby="backup-title">
+  <h2 id="backup-title">Backups</h2>
+  <p>A backup is saved every day to <code>{{ settings.backup_dir }}</code>; the newest {{ settings.backup_keep }} are kept.
+    {% if latest_backup %}The latest is from <time datetime="{{ latest_backup | iso }}" title="{{ latest_backup | local }}">{{ latest_backup | relative }}</time>.{% else %}None has been made yet.{% endif %}</p>
+  <p><a class="button button-secondary" href="/settings/backup" download>Download a backup now</a></p>
+  <p class="hint">To restore, stop the app and replace <code>jobmonitor.db</code> in the data folder with a backup file. TrueNAS dataset snapshots work too.</p>
+</section>
+
+<section class="card" aria-labelledby="about-title">
+  <h2 id="about-title">About</h2>
+  <dl class="criteria-list">
+    <div><dt>Version</dt><dd>{{ app_version }}</dd></div>
+    <div><dt>Browser for JavaScript pages</dt><dd>{{ "Available" if browser_available else "Not in this image (lite build)" }}</dd></div>
+    <div><dt>Checks at once</dt><dd>{{ settings.max_concurrent_checks }}</dd></div>
+    <div><dt>Default interval</dt><dd>{{ settings.default_interval_hours }} hours</dd></div>
+    <div><dt>Data folder</dt><dd><code>{{ settings.data_dir }}</code></dd></div>
+  </dl>
+  <p class="hint">These come from the container's environment variables (see the README).</p>
+</section>
+</div>
+</div>
 {% endblock %}

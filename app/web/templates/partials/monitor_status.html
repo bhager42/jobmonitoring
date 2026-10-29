@@ -1,0 +1,18 @@
+<div class="monitor-status" id="status-{{ monitor.id }}"
+  {% if busy %}hx-get="/monitors/{{ monitor.id }}/status?was_busy=true" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}
+  role="status">
+  {% if busy %}
+    <span class="status status-muted"><span class="spinner" aria-hidden="true"></span> Checking now…</span>
+  {% else %}
+    <span class="status status-{{ monitor.last_status | status_tone }}">{{ monitor.last_status | status_label }}</span>
+    {% if monitor.last_check_at %}
+      <span class="muted">checked <time datetime="{{ monitor.last_check_at | iso }}" title="{{ monitor.last_check_at | local }}">{{ monitor.last_check_at | relative }}</time></span>
+    {% endif %}
+    {% if monitor.enabled %}
+      <span class="muted">· next {% if monitor.next_check_at %}<time datetime="{{ monitor.next_check_at | iso }}" title="{{ monitor.next_check_at | local }}">{{ monitor.next_check_at | relative }}</time>{% else %}soon{% endif %}</span>
+    {% else %}
+      <span class="muted">· paused</span>
+    {% endif %}
+    {% if backing_off %}<span class="badge badge-warning">Checking less often after repeated failures</span>{% endif %}
+  {% endif %}
+</div>

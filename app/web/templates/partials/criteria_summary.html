@@ -1,0 +1,18 @@
+{% if criteria is none %}
+  <p class="alert alert-error">The saved criteria are no longer valid. <a href="/monitors/{{ monitor.id }}/edit">Edit the monitor</a> to fix them.</p>
+{% elif criteria.is_empty() %}
+  <p>Every new posting.</p>
+{% else %}
+  <dl class="criteria-list">
+    {% if criteria.keywords_any %}<div><dt>Any of</dt><dd>{{ criteria.keywords_any | join(", ") }}</dd></div>{% endif %}
+    {% if criteria.keywords_all %}<div><dt>All of</dt><dd>{{ criteria.keywords_all | join(", ") }}</dd></div>{% endif %}
+    {% if criteria.keywords_none %}<div><dt>None of</dt><dd>{{ criteria.keywords_none | join(", ") }}</dd></div>{% endif %}
+    {% if criteria.keywords_any or criteria.keywords_all or criteria.keywords_none %}<div><dt>Searching</dt><dd>{{ "titles only" if criteria.title_only else "titles and descriptions" }}</dd></div>{% endif %}
+    {% if criteria.title_regex %}<div><dt>Title pattern</dt><dd><code>{{ criteria.title_regex }}</code></dd></div>{% endif %}
+    {% if criteria.locations_any %}<div><dt>Locations</dt><dd>{{ criteria.locations_any | join(", ") }}</dd></div>{% endif %}
+    {% if criteria.remote_only %}<div><dt>Remote</dt><dd>Remote jobs only</dd></div>{% endif %}
+    {% if criteria.departments_any %}<div><dt>Departments</dt><dd>{{ criteria.departments_any | join(", ") }}</dd></div>{% endif %}
+    {% if criteria.employment_types_any %}<div><dt>Employment</dt><dd>{{ criteria.employment_types_any | join(", ") }}</dd></div>{% endif %}
+    {% if criteria.posted_within_days %}<div><dt>Posted within</dt><dd>{{ criteria.posted_within_days }} days</dd></div>{% endif %}
+  </dl>
+{% endif %}

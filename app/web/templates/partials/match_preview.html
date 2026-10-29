@@ -1,0 +1,26 @@
+<div id="match-preview" class="match-preview" aria-live="polite">
+{% if preview %}
+  {% set criteria_errors = [] %}
+  {% for key, message in form.errors.items() %}{% if key not in ("url", "name", "interval_hours", "render_mode") %}{% set _ = criteria_errors.append(message) %}{% endif %}{% endfor %}
+  {% if criteria_errors %}
+    <p class="alert alert-error">Fix the criteria to see matches: {{ criteria_errors | join("; ") }}</p>
+  {% else %}
+    {% set matched = rows | selectattr("result") | selectattr("result.matched") | list %}
+    <p><strong>{{ matched | length }}</strong> of {{ "these " ~ rows | length if preview.postings | length > rows | length else "the " ~ rows | length }} postings match{% if preview.postings | length > rows | length %} (showing the first {{ rows | length }} of {{ preview.postings | length }}){% endif %}.</p>
+  {% endif %}
+  <ul class="preview-list" role="list">
+    {% for row in rows %}
+    {% set ok = row.result is not none and row.result.matched %}
+    <li class="{{ 'is-match' if ok else 'is-miss' }}">
+      <span class="preview-mark" aria-hidden="true">{{ "✓" if ok else "–" }}</span>
+      <span class="visually-hidden">{{ "Matches:" if ok else "Does not match:" }}</span>
+      <span>
+        <a href="{{ row.url }}" target="_blank" rel="noopener noreferrer">{{ row.title }}<span class="visually-hidden"> (opens in a new tab)</span></a>
+        {% if row.location %}<span class="muted">· {{ row.location }}</span>{% endif %}
+        {% if ok %}<span class="muted reasons-inline">— {{ row.result.reasons | join("; ") }}</span>{% endif %}
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+</div>

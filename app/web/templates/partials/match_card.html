@@ -1,0 +1,54 @@
+{% set posting = match.posting %}
+<article class="match-card{% if match.seen %} is-seen{% endif %}{% if match.dismissed %} is-dismissed{% endif %}" id="match-{{ match.id }}" aria-labelledby="match-{{ match.id }}-title">
+  <div class="match-head">
+    <h3 id="match-{{ match.id }}-title">
+      <a href="{{ posting.url }}" target="_blank" rel="noopener noreferrer">{{ posting.title }}<span class="visually-hidden"> (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
+    </h3>
+    <p class="match-meta">
+      <a href="/monitors/{{ match.monitor.id }}">{{ match.monitor.name }}</a>
+      {% if posting.location %}<span>· {{ posting.location }}</span>{% endif %}
+      {% if posting.remote %}<span class="badge">Remote</span>{% endif %}
+    </p>
+  </div>
+  <ul class="reasons" aria-label="Why it matched">
+    {% for reason in match.reasons %}<li>{{ reason }}</li>{% endfor %}
+  </ul>
+  <p class="match-time">
+    Found <time datetime="{{ match.matched_at | iso }}" title="{{ match.matched_at | local }}">{{ match.matched_at | relative }}</time>
+    {% if posting.posted_at %}· posted {{ posting.posted_at | local("%b %-d") }}{% endif %}
+    {% if not posting.is_active %}· <strong>no longer listed</strong>{% endif %}
+  </p>
+  <div class="actions">
+    {% set target = "#match-" ~ match.id %}
+    {% if not match.seen %}
+    <form method="post" action="/matches/{{ match.id }}/seen" hx-post="/matches/{{ match.id }}/seen" hx-target="{{ target }}" hx-swap="outerHTML">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="context" value="{{ context }}">
+      <input type="hidden" name="next" value="{{ current_path }}">
+      <button type="submit" class="button button-small">Mark seen</button>
+    </form>
+    {% elif not match.dismissed %}
+    <form method="post" action="/matches/{{ match.id }}/unseen" hx-post="/matches/{{ match.id }}/unseen" hx-target="{{ target }}" hx-swap="outerHTML">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="context" value="{{ context }}">
+      <input type="hidden" name="next" value="{{ current_path }}">
+      <button type="submit" class="button button-small button-secondary">Mark unseen</button>
+    </form>
+    {% endif %}
+    {% if match.dismissed %}
+    <form method="post" action="/matches/{{ match.id }}/restore" hx-post="/matches/{{ match.id }}/restore" hx-target="{{ target }}" hx-swap="outerHTML">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="context" value="{{ context }}">
+      <input type="hidden" name="next" value="{{ current_path }}">
+      <button type="submit" class="button button-small button-secondary">Restore</button>
+    </form>
+    {% else %}
+    <form method="post" action="/matches/{{ match.id }}/dismiss" hx-post="/matches/{{ match.id }}/dismiss" hx-target="{{ target }}" hx-swap="outerHTML">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="context" value="{{ context }}">
+      <input type="hidden" name="next" value="{{ current_path }}">
+      <button type="submit" class="button button-small button-secondary">Dismiss</button>
+    </form>
+    {% endif %}
+  </div>
+</article>

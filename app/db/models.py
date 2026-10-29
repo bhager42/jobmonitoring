@@ -19,7 +19,7 @@ from sqlalchemy import (
     UniqueConstraint,
     false,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 def utcnow() -> datetime:
@@ -160,6 +160,9 @@ class Match(Base):
     seen: Mapped[bool] = mapped_column(default=False)
     dismissed: Mapped[bool] = mapped_column(default=False)
     notified_at: Mapped[datetime | None]
+
+    posting: Mapped["Posting"] = relationship(lazy="raise")
+    monitor: Mapped["Monitor"] = relationship(lazy="raise")
 
 
 class CheckRun(Base):

@@ -1,0 +1,4 @@
+<form method="post" action="/monitors/{{ monitor.id }}/check" hx-post="/monitors/{{ monitor.id }}/check" hx-target="#status-{{ monitor.id }}" hx-swap="outerHTML">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button type="submit" class="button button-small button-secondary">Check now<span class="visually-hidden"> ({{ monitor.name }})</span></button>
+</form>

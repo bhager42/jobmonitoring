@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ monitor.name }}{% endblock %}
+{% block content %}
+<div class="section-head">
+  <h1>{{ monitor.name }}</h1>
+  <div class="actions">
+    {% include "partials/check_button.html" %}
+    <a class="button button-small button-secondary" href="/monitors/{{ monitor.id }}/edit">Edit</a>
+    <a class="button button-small button-danger" href="/monitors/{{ monitor.id }}/delete" data-dialog-open="delete-dialog">Delete</a>
+  </div>
+</div>
+
+{% if created %}<p class="alert alert-success" role="status">Monitor saved. The first check starts in a moment and records what's listed now.</p>{% endif %}
+{% if saved %}<p class="alert alert-success" role="status">Changes saved.</p>{% endif %}
+
+<p class="monitor-source">
+  <a href="{{ monitor.url }}" target="_blank" rel="noopener noreferrer">{{ monitor.url }}<span class="visually-hidden"> (opens in a new tab)</span></a>
+  {% if monitor.adapter %}<span class="badge">{{ ADAPTER_LABELS.get(monitor.adapter, monitor.adapter) }}</span>{% endif %}
+</p>
+{% include "partials/monitor_status.html" %}
+{% if monitor.last_error and not busy %}<p class="alert {{ 'alert-warning' if monitor.last_status == 'warning' else 'alert-error' }}">{{ monitor.last_error }}</p>{% endif %}
+
+<div class="grid-2">
+  <section class="card" aria-labelledby="criteria-title">
+    <h2 id="criteria-title">Looking for</h2>
+    {% include "partials/criteria_summary.html" %}
+  </section>
+  <section class="card" aria-labelledby="schedule-title">
+    <h2 id="schedule-title">Schedule</h2>
+    <dl class="criteria-list">
+      <div><dt>Checks</dt><dd>{{ "every " ~ monitor.interval_hours ~ " hours" if monitor.enabled else "paused" }}</dd></div>
+      <div><dt>Reading</dt><dd>{{ {"auto": "automatic", "static": "plain HTML only", "browser": "always with the browser"}[monitor.render_mode] }}{% if not monitor.respect_robots %}, ignoring robots.txt{% endif %}</dd></div>
+      <div><dt>Added</dt><dd><time datetime="{{ monitor.created_at | iso }}">{{ monitor.created_at | local("%Y-%m-%d") }}</time></dd></div>
+    </dl>
+  </section>
+</div>
+
+<section aria-labelledby="postings-title" class="stack-section">
+  <div class="section-head">
+    <h2 id="postings-title">Listed now <span class="muted">({{ total_active }}{% if inactive %}, plus {{ inactive }} no longer listed{% endif %})</span></h2>
+    <nav aria-label="Filter postings" class="filter-links">
+      <a href="/monitors/{{ monitor.id }}#postings-title" {% if not only_matching %}aria-current="true"{% endif %}>All</a>
+      <a href="/monitors/{{ monitor.id }}?matching=true#postings-title" {% if only_matching %}aria-current="true"{% endif %}>Matching ({{ matching_count }})</a>
+    </nav>
+  </div>
+  {% if monitor.baseline_done and unalerted_matching %}
+    <p class="alert alert-info">{{ unalerted_matching }} posting{{ "s" if unalerted_matching != 1 }} listed now match{{ "es" if unalerted_matching == 1 }} your criteria but {{ "was" if unalerted_matching == 1 else "were" }} already there on the first check, so {{ "it hasn't" if unalerted_matching == 1 else "they haven't" }} been added to your matches. <a href="/monitors/{{ monitor.id }}?matching=true#postings-title">Show matching postings</a>.</p>
+  {% endif %}
+  {% if not postings %}
+    <p class="card empty-state">{{ "No postings match your criteria right now." if only_matching else ("Nothing recorded yet. The first check will list what's on the page." if not monitor.baseline_done else "The page lists no postings right now.") }}</p>
+  {% else %}
+  <ul class="posting-list" role="list">
+    {% for posting in postings %}
+    {% set result = results[posting.id] %}
+    <li class="{{ 'is-match' if result.matched else '' }}">
+      <a href="{{ posting.url }}" target="_blank" rel="noopener noreferrer">{{ posting.title }}<span class="visually-hidden"> (opens in a new tab)</span></a>
+      {% if result.matched %}<span class="badge badge-match">Matches</span>{% endif %}
+      {% if posting.id in alerted %}<span class="badge">In your matches</span>{% endif %}
+      <span class="muted">
+        {% if posting.location %}{{ posting.location }} · {% endif %}first seen <time datetime="{{ posting.first_seen_at | iso }}" title="{{ posting.first_seen_at | local }}">{{ posting.first_seen_at | relative }}</time>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+<section aria-labelledby="runs-title" class="stack-section">
+  <h2 id="runs-title">Recent checks</h2>
+  {% if not runs %}
+    <p class="muted">No checks yet.</p>
+  {% else %}
+  <div class="table-wrap" tabindex="0" role="region" aria-labelledby="runs-title">
+    <table>
+      <thead><tr><th scope="col">When</th><th scope="col">Result</th><th scope="col">Found</th><th scope="col">New</th><th scope="col">New matches</th><th scope="col">Took</th></tr></thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td><time datetime="{{ run.started_at | iso }}" title="{{ run.started_at | local }}">{{ run.started_at | relative }}</time></td>
+          <td><span class="status status-{{ run.status | status_tone }}">{{ run.status | status_label }}</span>{% if run.error %}<br><span class="muted small">{{ run.error | truncate(160) }}</span>{% endif %}</td>
+          <td>{{ run.postings_found }}</td>
+          <td>{{ run.new_postings }}</td>
+          <td>{{ run.new_matches }}</td>
+          <td>{{ "%.1f s" | format(run.duration_ms / 1000) if run.duration_ms is not none else "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+
+<dialog id="delete-dialog" aria-labelledby="delete-title">
+  <form method="post" action="/monitors/{{ monitor.id }}/delete">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <h2 id="delete-title">Delete {{ monitor.name }}?</h2>
+    <p>This removes the monitor, its postings, its matches and its check history. It can't be undone.</p>
+    <div class="actions">
+      <button type="submit" class="button button-danger">Delete monitor</button>
+      <button type="button" class="button button-secondary" data-dialog-close autofocus>Cancel</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

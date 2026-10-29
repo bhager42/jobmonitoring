@@ -4,10 +4,11 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from functools import partial
-from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
+from fastapi.responses import Response
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
 from app.auth.bootstrap import BootstrapError, bootstrap_auth
@@ -21,11 +22,13 @@ from app.services.fetching import context_factory, create_browser, create_http_c
 from app.services.maintenance import run_maintenance_if_due
 from app.services.scheduler import Scheduler
 from app.web.api import v1
-from app.web.routes import auth, health, pages
+from app.web.assets import STATIC_DIR, VersionedStaticFiles
+from app.web.preview import PreviewCache
+from app.web.routes import auth, health, matches, monitors, pages
+from app.web.templating import templates
 
 log = logging.getLogger(__name__)
 
-STATIC_DIR = Path(__file__).parent / "web" / "static"
 FAILED_LOGIN_DELAY_SECONDS = 0.3
 
 
@@ -90,9 +93,32 @@ def create_app(
     app.add_middleware(AuthMiddleware, secure_cookies=settings.secure_cookies)
     app.add_middleware(SecurityHeadersMiddleware, hsts=settings.secure_cookies)
 
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    app.state.previews = PreviewCache()
+
+    @app.exception_handler(StarletteHTTPException)
+    async def html_errors(request: Request, exc: StarletteHTTPException) -> Response:
+        """HTML pages get a friendly error page; the JSON API keeps JSON errors."""
+        if request.url.path.startswith("/api/") or exc.status_code < 400:
+            return await http_exception_handler(request, exc)
+        title = {404: "Not found", 405: "Not allowed"}.get(exc.status_code, "Something went wrong")
+        message = (
+            "There's nothing at this address. It may have been deleted."
+            if exc.status_code == 404
+            else str(exc.detail)
+        )
+        return templates.TemplateResponse(
+            request,
+            "pages/error.html",
+            {"title": title, "message": message},
+            status_code=exc.status_code,
+            headers=getattr(exc, "headers", None),
+        )
+
+    app.mount("/static", VersionedStaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(pages.router)
+    app.include_router(monitors.router)
+    app.include_router(matches.router)
     app.include_router(v1.router)
     return app

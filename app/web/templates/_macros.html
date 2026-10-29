@@ -1,0 +1,29 @@
+{# Form field helpers: label, hint, error message, and the matching ARIA attributes. #}
+{% macro describedby(name, hint, errors) -%}
+  {%- set ids = [] -%}
+  {%- if hint %}{% set _ = ids.append(name ~ "-hint") %}{% endif -%}
+  {%- if errors.get(name) %}{% set _ = ids.append(name ~ "-error") %}{% endif -%}
+  {%- if ids %} aria-describedby="{{ ids | join(' ') }}"{% endif -%}
+  {%- if errors.get(name) %} aria-invalid="true"{% endif -%}
+{%- endmacro %}
+
+{% macro field_messages(name, hint, errors) %}
+  {% if hint %}<p class="hint" id="{{ name }}-hint">{{ hint }}</p>{% endif %}
+  {% if errors.get(name) %}<p class="field-error" id="{{ name }}-error">{{ errors[name] }}</p>{% endif %}
+{% endmacro %}
+
+{% macro text_field(name, label, value, errors, hint="", type="text", attrs="") %}
+<div class="field{% if errors.get(name) %} has-error{% endif %}">
+  <label for="{{ name }}">{{ label }}</label>
+  <input id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value if value is not none else '' }}" {{ attrs | safe }}{{ describedby(name, hint, errors) }}>
+  {{ field_messages(name, hint, errors) }}
+</div>
+{% endmacro %}
+
+{% macro checkbox(name, label, checked, errors, hint="") %}
+<div class="field field-check{% if errors.get(name) %} has-error{% endif %}">
+  <input id="{{ name }}" name="{{ name }}" type="checkbox" value="on" {% if checked %}checked{% endif %}{{ describedby(name, hint, errors) }}>
+  <label for="{{ name }}">{{ label }}</label>
+  {{ field_messages(name, hint, errors) }}
+</div>
+{% endmacro %}

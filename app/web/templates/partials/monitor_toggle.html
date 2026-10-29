@@ -1,0 +1,7 @@
+<form method="post" action="/monitors/{{ monitor.id }}/toggle" hx-post="/monitors/{{ monitor.id }}/toggle" hx-swap="outerHTML" id="toggle-{{ monitor.id }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button type="submit" class="switch" role="switch" aria-checked="{{ 'true' if monitor.enabled else 'false' }}" aria-label="Checking {{ monitor.name }}">
+    <span class="switch-track" aria-hidden="true"></span>
+    <span class="switch-label">{{ "On" if monitor.enabled else "Paused" }}</span>
+  </button>
+</form>

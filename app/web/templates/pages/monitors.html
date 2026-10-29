@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Monitors{% endblock %}
+{% block content %}
+<div class="section-head">
+  <h1>Monitors</h1>
+  <a class="button" href="/monitors/new">Add a monitor</a>
+</div>
+{% if request.query_params.get("deleted") %}<p class="alert alert-success" role="status">Monitor deleted.</p>{% endif %}
+
+{% if not monitors %}
+<p class="card empty-state">No monitors yet. <a href="/monitors/new">Add the first one</a>.</p>
+{% else %}
+<ul class="monitor-list" role="list">
+  {% for monitor in monitors %}
+  {% set counts = match_counts.get(monitor.id, (0, 0)) %}
+  <li class="card monitor-card">
+    <div class="monitor-card-head">
+      <h2><a href="/monitors/{{ monitor.id }}">{{ monitor.name }}</a></h2>
+      {% include "partials/monitor_toggle.html" %}
+    </div>
+    <p class="muted monitor-source">
+      {{ monitor.url | host }}
+      {% if monitor.adapter %}<span class="badge">{{ monitor.adapter | adapter_badge }}</span>{% endif %}
+      · every {{ monitor.interval_hours }} h
+    </p>
+    {% with busy = monitor.id in busy, backing_off = monitor.id in backing_off %}{% include "partials/monitor_status.html" %}{% endwith %}
+    <dl class="inline-stats">
+      <div><dt>Listed now</dt><dd>{{ active.get(monitor.id, 0) }}</dd></div>
+      <div><dt>Matches</dt><dd>{{ counts[0] }}</dd></div>
+      <div><dt>New</dt><dd>{{ counts[1] }}</dd></div>
+    </dl>
+    <div class="actions">
+      {% include "partials/check_button.html" %}
+      <a class="button button-small button-secondary" href="/monitors/{{ monitor.id }}/edit">Edit<span class="visually-hidden"> {{ monitor.name }}</span></a>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "_macros.html" import text_field, checkbox, describedby, field_messages %}
+{% set errors = form.errors %}
+{% set c = form.criteria_values %}
+{% block title %}{{ "Edit " ~ monitor.name if monitor else "Add a monitor" }}{% endblock %}
+{% block content %}
+<h1>{{ "Edit " ~ monitor.name if monitor else "Add a monitor" }}</h1>
+
+{% if errors %}
+<div class="alert alert-error" role="alert" tabindex="-1" data-focus-on-load>
+  <h2 class="alert-title">Please fix {{ "this" if errors | length == 1 else "these " ~ errors | length ~ " things" }}</h2>
+  <ul>{% for name, message in errors.items() %}<li><a href="#{{ name }}">{{ message }}</a></li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" action="{{ '/monitors/' ~ monitor.id if monitor else '/monitors' }}" id="monitor-form" class="monitor-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  <fieldset class="card">
+    <legend>1. Careers page</legend>
+    {{ text_field("url", "Address of the page that lists the jobs", form.url, errors,
+                  hint="For example https://boards.greenhouse.io/yourcompany or https://example.com/careers",
+                  type="url", attrs='required autocomplete="url" spellcheck="false" inputmode="url"') }}
+    <div class="actions">
+      <button type="submit" class="button button-secondary" formaction="/monitors/detect" formnovalidate
+              hx-post="/monitors/detect" hx-target="#detect-result" hx-swap="outerHTML"
+              hx-indicator="#detect-indicator" hx-disabled-elt="this">Find jobs</button>
+      <span id="detect-indicator" class="htmx-indicator muted" role="status"><span class="spinner" aria-hidden="true"></span> Reading the page. Pages that need the browser can take up to a minute.</span>
+    </div>
+    {% include "partials/detect_result.html" %}
+  </fieldset>
+
+  <fieldset class="card" id="criteria"
+            hx-post="/monitors/preview" hx-trigger="input delay:400ms, change" hx-target="#match-preview" hx-swap="outerHTML" hx-include="#monitor-form" hx-sync="this:replace">
+    <legend>2. What you're looking for</legend>
+    <p class="hint">Separate words or phrases with commas. Matching ignores case and only counts whole words: "java" won't match "JavaScript". Leave everything empty to be told about every new posting.</p>
+    {{ text_field("keywords_any", "Any of these words", c.keywords_any, errors, hint="At least one must appear, e.g. python, backend, data engineer") }}
+    {{ text_field("keywords_all", "All of these words", c.keywords_all, errors) }}
+    {{ text_field("keywords_none", "None of these words", c.keywords_none, errors, hint="Skip postings that mention any of these, e.g. intern, senior staff") }}
+    {{ checkbox("title_only", "Search job titles only", c.title_only, errors, hint="Untick to search the job description too, where the site provides one.") }}
+    {{ text_field("locations_any", "Locations", c.locations_any, errors, hint="Any of these, e.g. denver, colorado, remote") }}
+    {{ checkbox("remote_only", "Remote jobs only", c.remote_only, errors) }}
+    <details class="more-criteria"{% if errors.get("departments_any") or errors.get("employment_types_any") or errors.get("title_regex") or errors.get("posted_within_days") or c.departments_any or c.employment_types_any or c.title_regex or c.posted_within_days %} open{% endif %}>
+      <summary>More criteria</summary>
+      {{ text_field("departments_any", "Departments", c.departments_any, errors) }}
+      {{ text_field("employment_types_any", "Employment types", c.employment_types_any, errors, hint="e.g. full-time, contract") }}
+      {{ text_field("posted_within_days", "Posted within (days)", c.posted_within_days, errors, type="number",
+                    hint="Only when the site gives a date. Postings without one still count.", attrs='min="1" max="365" inputmode="numeric"') }}
+      {{ text_field("title_regex", "Title pattern (regular expression)", c.title_regex, errors, hint="Advanced. Case-insensitive.", attrs='spellcheck="false"') }}
+    </details>
+  </fieldset>
+
+  <fieldset class="card">
+    <legend>3. Name and schedule</legend>
+    {{ text_field("name", "Name", form.name, errors, hint="Leave empty to use the site's name.", attrs='maxlength="200"') }}
+    {{ text_field("interval_hours", "Check every (hours)", form.interval_hours, errors, type="number",
+                  hint="Between 1 and 720. Checks are spread out by a few minutes either way.", attrs='min="1" max="720" required inputmode="numeric"') }}
+    {{ checkbox("enabled", "Checking is on", form.enabled, errors) }}
+    {{ checkbox("alert_existing", "Also alert on matches already listed when the monitor is first checked", form.alert_existing, errors,
+                hint="Off: the first check just records what's there, and only later postings alert you.") }}
+
+    <details class="advanced"{% if form.css or form.wait_selector or form.render_mode != "auto" or not form.respect_robots or errors.get("render_mode") %} open{% endif %}>
+      <summary>Advanced</summary>
+      <div class="field">
+        <label for="render_mode">How to read the page</label>
+        <select id="render_mode" name="render_mode"{{ describedby("render_mode", "render_mode", errors) }}>
+          <option value="auto"{% if form.render_mode == "auto" %} selected{% endif %}>Automatic (use the browser only if needed)</option>
+          <option value="static"{% if form.render_mode == "static" %} selected{% endif %}>Plain HTML only</option>
+          <option value="browser"{% if form.render_mode == "browser" %} selected{% endif %}{% if not browser_available %} disabled{% endif %}>Always use the browser</option>
+        </select>
+        {{ field_messages("render_mode", "Some pages build their job list with JavaScript and need the browser." ~ ("" if browser_available else " This image has no browser (lite build)."), errors) }}
+      </div>
+      {{ checkbox("respect_robots", "Obey the site's robots.txt", form.respect_robots, errors, hint="Recommended. Turn off only for a site you're allowed to check.") }}
+      <p class="hint">CSS selectors are for pages Job Monitor can't read by itself. When set, they replace automatic detection.</p>
+      {{ text_field("item_selector", "Each posting (CSS selector)", form.css.get("item_selector"), errors, attrs='spellcheck="false"') }}
+      {{ text_field("title_selector", "Title inside a posting", form.css.get("title_selector"), errors, attrs='spellcheck="false"') }}
+      {{ text_field("link_selector", "Link inside a posting", form.css.get("link_selector"), errors, attrs='spellcheck="false"') }}
+      {{ text_field("location_selector", "Location inside a posting", form.css.get("location_selector"), errors, attrs='spellcheck="false"') }}
+      {{ text_field("wait_selector", "Browser: wait for this element", form.wait_selector, errors, attrs='spellcheck="false"') }}
+    </details>
+  </fieldset>
+
+  <div class="actions">
+    <button type="submit" class="button">{{ "Save changes" if monitor else "Save monitor" }}</button>
+    <a class="button button-secondary" href="{{ '/monitors/' ~ monitor.id if monitor else '/monitors' }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

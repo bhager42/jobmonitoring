@@ -18,10 +18,10 @@ from app.services.app_settings import PASSWORD_HASH, get_setting
 log = logging.getLogger(__name__)
 
 # Paths reachable without a session. Everything else needs one ("default deny").
-PUBLIC_PATHS = frozenset({"/healthz", "/login", "/setup"})
+PUBLIC_PATHS = frozenset({"/healthz", "/login", "/setup", "/sw.js"})
 PUBLIC_PREFIXES = ("/static/",)
 # While no password exists, only these are reachable; everything else redirects to /setup.
-SETUP_PATHS = frozenset({"/healthz", "/setup"})
+SETUP_PATHS = frozenset({"/healthz", "/setup", "/sw.js"})
 
 MAX_FORM_BYTES = 1024 * 1024
 FORM_TYPES = ("application/x-www-form-urlencoded", "multipart/form-data")

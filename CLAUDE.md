@@ -6,15 +6,16 @@ Self-hosted job-listing monitor that runs as a single Docker container on TrueNA
 - Implement one phase at a time. Lint, type checks, and tests must pass before each commit.
 
 ## Status
-- Phases 0–4 are done (scaffold; database and config; authentication and security baseline;
-  scraping engine; matching, check runner and scheduler). Next is Phase 5 (web UI).
+- Phases 0–5 are done (scaffold; database and config; authentication and security baseline;
+  scraping engine; matching, check runner and scheduler; web UI). Next is Phase 6 (notifications).
 
 ## Commands
 ```bash
 uv sync --all-extras                     # app + browser extra + dev deps (plain `uv sync` removes Playwright)
 uv run ruff check . && uv run ruff format --check .
 uv run pyright
-uv run pytest --cov                       # fails below 85% coverage
+uv run pytest --cov                       # fails below 85% coverage; includes the browser E2E test
+E2E_SCREENSHOTS=/tmp/shots uv run pytest tests/e2e   # keep screenshots (light/dark, 320/1440 px)
 DATA_DIR=./data uv run jobmonitor migrate  # apply migrations (serve also does this)
 DATA_DIR=./data uv run jobmonitor serve  # run without Docker on :8080
 echo 'new password' | DATA_DIR=./data uv run jobmonitor reset-password --password-stdin
@@ -79,6 +80,30 @@ GitHub Actions uses the defaults.
   fixture, and fix the adapter.
 - Browser tests use a real Chromium and skip if none can start. Locally, set `CHROMIUM_EXECUTABLE`
   (in the cloud sandbox: `/opt/pw-browsers/chromium-*/chrome-linux64/chrome`).
+
+## Web UI conventions
+- Server-rendered Jinja2 plus **htmx 2.0.11, vendored** in `app/web/static/js/` (hash-checked by
+  `tests/unit/test_vendored.py`; see `VENDORED.md`). Its config lives in a `<meta name="htmx-config">`
+  in `base.html`. `historyCacheSize: 0` keeps private pages out of localStorage, and `allowEval: false`
+  plus `includeIndicatorStyles: false` keep it within the CSP. A test checks all of these.
+- **Every htmx action must also work as a plain form post.** Routes check `is_htmx(request)` and
+  return a fragment (`templates/partials/`) or redirect/full page. Forms carry `csrf_token` hidden
+  fields; htmx sends the header from `<body hx-headers>`.
+- **Static URLs:** always `{{ static('path') }}`. It adds `?v=<content hash>`, which is served with
+  `immutable` caching. Never hard-code `/static/...` in templates except in `manifest.webmanifest`.
+- `app/web/forms.py` `MonitorForm` is the single parser and validator for create, edit and detect.
+  Errors are per field and shown with `aria-invalid`/`aria-describedby` via `_macros.html`.
+- Detection previews live in an in-memory `PreviewCache` (30 min, 50 entries). The form carries
+  only a token, and saving reuses the detected adapter only if the URL and CSS fields are unchanged.
+- `/sw.js` is served from the root (public, also during setup). It caches only versioned
+  `/static/` files, never pages.
+- `tests/e2e/` runs the real app (`python -m app.cli serve`) against a fake careers site, in
+  Chromium. It asserts no serious/critical axe-core violations, no horizontal overflow at 320 and
+  1440 px in light and dark, and no console errors. axe-core 4.14.0 is vendored in
+  `tests/e2e/vendor/` (tests only, MPL-2.0).
+- Inputs have an intrinsic minimum width. Fields set `inline-size: 100%; min-inline-size: 0`, and
+  text that can be long (URLs, paths) uses `overflow-wrap: anywhere`, so 320 px phones don't scroll
+  sideways.
 
 ## Checks and scheduling conventions
 - `app/matching/`: `Criteria` (Pydantic, stored as `monitors.criteria`) and the pure
@@ -162,5 +187,14 @@ GitHub Actions uses the defaults.
 - **Backoff:** from the 5th consecutive failure the interval doubles per failure, capped at 7 days
   (or the monitor's own interval if that is longer). Jitter is ±10% on every schedule.
 - **Interrupted checks** (still `running` at startup) are closed as errors when the app starts.
+- **Global defaults on the Settings page are read-only** (they come from environment variables).
+  The plan listed them under Settings, but making them editable would mean a second source of truth.
+- **SQLAlchemy 2.1:** `Select` is variadic (`Select[Match]`, not `Select[tuple[Match]]`) and
+  `Result.tuples()` is deprecated, so unpack rows directly. `dict(result)` misbehaves because
+  results have `.keys()`; use a comprehension.
+- **`Match.posting` / `Match.monitor` relationships use `lazy="raise"`.** Load them with
+  `joinedload` (`routes/matches.with_details`) so templates never trigger lazy I/O.
+- **E2E runs against `jobmonitor serve` in a subprocess**, not the Docker image (plan §13). The
+  container smoke test covers the image separately.
 - **Static assets get `Cache-Control: no-cache`** (ETag revalidation) until Phase 5 adds hashed
   filenames for long-lived caching. Everything else gets `no-store`.

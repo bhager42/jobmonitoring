@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Delete {{ monitor.name }}{% endblock %}
+{% block content %}
+<section class="card card-narrow" aria-labelledby="page-title">
+  <h1 id="page-title">Delete {{ monitor.name }}?</h1>
+  <p>This removes the monitor, its postings, its matches and its check history. It can't be undone.</p>
+  <form method="post" action="/monitors/{{ monitor.id }}/delete" class="actions">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="button button-danger">Delete monitor</button>
+    <a class="button button-secondary" href="/monitors/{{ monitor.id }}">Cancel</a>
+  </form>
+</section>
+{% endblock %}

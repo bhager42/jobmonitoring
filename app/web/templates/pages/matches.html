@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Matches{% endblock %}
+{% block content %}
+<h1>Matches</h1>
+<form method="get" action="/matches" class="filters card">
+  <div class="field">
+    <label for="state">Show</label>
+    <select id="state" name="state">
+      {% for value, label in [("unseen", "New"), ("seen", "Seen"), ("dismissed", "Dismissed"), ("all", "All")] %}
+      <option value="{{ value }}"{% if state == value %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="monitor">Monitor</label>
+    <select id="monitor" name="monitor">
+      <option value="">All monitors</option>
+      {% for m in monitors %}<option value="{{ m.id }}"{% if monitor_id == m.id %} selected{% endif %}>{{ m.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="button button-secondary">Filter</button>
+</form>
+
+<p class="muted" role="status">{{ total }} match{{ "es" if total != 1 }}</p>
+<div class="match-list">
+  {% for match in matches %}
+    {% with context = "list" %}{% include "partials/match_card.html" %}{% endwith %}
+  {% else %}
+    <p class="card empty-state">Nothing here.</p>
+  {% endfor %}
+</div>
+
+{% if pages > 1 %}
+<nav aria-label="Pages" class="pagination">
+  {% set base = "/matches?state=" ~ state ~ ("&monitor=" ~ monitor_id if monitor_id else "") %}
+  {% if page > 1 %}<a href="{{ base }}&page={{ page - 1 }}" rel="prev">Previous</a>{% endif %}
+  <span>Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a href="{{ base }}&page={{ page + 1 }}" rel="next">Next</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

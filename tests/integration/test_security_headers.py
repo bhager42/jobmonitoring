@@ -1,3 +1,4 @@
+import re
 from collections.abc import Iterator
 
 import pytest
@@ -42,7 +43,9 @@ def test_pages_have_no_inline_scripts_or_styles(client: TestClient) -> None:
     login(client)
     pages += [client.get("/").text, client.get("/settings").text]
     for html in pages:
-        assert "<script" not in html
+        # External scripts only: every <script> needs a src, and no inline event handlers.
+        assert re.findall(r"<script(?![^>]*\bsrc=)[^>]*>", html) == []
+        assert re.findall(r"\son[a-z]+=", html) == []
         assert "<style" not in html
         assert " style=" not in html
 
