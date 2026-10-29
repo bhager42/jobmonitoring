@@ -17,6 +17,7 @@ dependencies = [
     "python-multipart>=0.0.32",
     "httpx[http2]>=0.28.1",
     "selectolax>=1.0.0",
+    "regex>=2026.9.29",
 ]
 
 [project.scripts]
@@ -30,6 +31,7 @@ browser = [
 [dependency-groups]
 dev = [
     "httpx",
+    "hypothesis>=6.169.2",
     "pyright",
     "pytest",
     "pytest-asyncio>=1.4.0",
@@ -65,7 +67,7 @@ extend-exclude = ["docs"]
 select = ["E", "W", "F", "I", "B", "UP", "S", "SIM", "RUF", "ASYNC", "PTH", "DTZ"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S105", "S106"]
+"tests/**" = ["S101", "S105", "S106", "S311"]
 "app/db/migrations/versions/**" = ["E501"]
 
 [tool.pyright]

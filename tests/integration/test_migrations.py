@@ -93,3 +93,26 @@ def test_refuses_database_from_newer_version(migrated_settings: Settings) -> Non
     with pytest.raises(DatabaseTooNewError, match="ffffffffffff"):
         upgrade_to_head(migrated_settings)
     assert not migrated_settings.backup_dir.exists()
+
+
+def test_upgrade_from_initial_schema_keeps_monitors(settings: Settings) -> None:
+    """An install created before `alert_existing` existed upgrades in place, with a backup."""
+    settings.data_dir.mkdir()
+    cfg = alembic_config(settings.db_path)
+    command.upgrade(cfg, "e7ea16393223")  # the initial schema
+    with sqlite3.connect(settings.db_path) as conn:
+        conn.execute(
+            "INSERT INTO monitors (name, url, adapter_config, render_mode, criteria,"
+            " interval_hours, enabled, respect_robots, notify, consecutive_failures,"
+            " baseline_done, created_at, updated_at) VALUES ('Old', 'https://x.example/', '{}',"
+            " 'auto', '{}', 12, 1, 1, 1, 0, 1, '2026-01-01', '2026-01-01')"
+        )
+    conn.close()
+
+    result = upgrade_to_head(settings)
+
+    assert result.from_revision == "e7ea16393223"
+    assert result.backup is not None and result.backup.exists()
+    with sqlite3.connect(settings.db_path) as conn:
+        assert conn.execute("SELECT name, alert_existing FROM monitors").fetchall() == [("Old", 0)]
+    conn.close()

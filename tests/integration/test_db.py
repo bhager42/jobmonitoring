@@ -110,7 +110,7 @@ async def test_naive_datetimes_rejected(session: AsyncSession) -> None:
 
 
 def test_app_lifespan_provides_sessions(password_settings: Settings) -> None:
-    app = create_app(password_settings, failed_login_delay=0)
+    app = create_app(password_settings, failed_login_delay=0, start_scheduler=False)
 
     @app.get("/test-db")
     async def read_db(session: AsyncSession = Depends(get_session)) -> dict[str, int]:  # noqa: B008

@@ -17,6 +17,7 @@ from sqlalchemy import (
     Text,
     TypeDecorator,
     UniqueConstraint,
+    false,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -112,6 +113,8 @@ class Monitor(Base):
     last_error: Mapped[str | None] = mapped_column(Text)
     consecutive_failures: Mapped[int] = mapped_column(default=0)
     baseline_done: Mapped[bool] = mapped_column(default=False)
+    # Raise alerts for matching postings found by the first (baseline) check too.
+    alert_existing: Mapped[bool] = mapped_column(default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 

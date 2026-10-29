@@ -3,6 +3,7 @@
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from functools import partial
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -13,7 +14,12 @@ from app.auth.bootstrap import BootstrapError, bootstrap_auth
 from app.auth.middleware import AuthMiddleware
 from app.config import Settings, get_settings
 from app.db.engine import create_engine, create_session_factory
+from app.db.models import utcnow
 from app.security.headers import SecurityHeadersMiddleware
+from app.services.checks import CheckRunner, mark_interrupted_runs
+from app.services.fetching import context_factory, create_browser, create_http_client
+from app.services.maintenance import run_maintenance_if_due
+from app.services.scheduler import Scheduler
 from app.web.api import v1
 from app.web.routes import auth, health, pages
 
@@ -24,7 +30,10 @@ FAILED_LOGIN_DELAY_SECONDS = 0.3
 
 
 def create_app(
-    settings: Settings | None = None, *, failed_login_delay: float = FAILED_LOGIN_DELAY_SECONDS
+    settings: Settings | None = None,
+    *,
+    failed_login_delay: float = FAILED_LOGIN_DELAY_SECONDS,
+    start_scheduler: bool = True,
 ) -> FastAPI:
     settings = settings or get_settings()
 
@@ -40,9 +49,30 @@ def create_app(
             log.error("%s", exc)
             await engine.dispose()
             raise
+
+        async with factory() as db:
+            if interrupted := await mark_interrupted_runs(db, utcnow()):
+                log.warning("Marked %d check(s) interrupted by the last shutdown", interrupted)
+        client = create_http_client(settings)
+        browser = create_browser(settings, client)
+        runner = CheckRunner(factory, context_factory(client, browser))
+        scheduler = Scheduler(
+            factory,
+            runner,
+            max_concurrent=settings.max_concurrent_checks,
+            maintenance=partial(run_maintenance_if_due, settings, factory),
+        )
+        app.state.http_client, app.state.browser = client, browser
+        app.state.runner, app.state.scheduler = runner, scheduler
+        if start_scheduler:
+            scheduler.start()
         try:
             yield
         finally:
+            await scheduler.stop()
+            if browser is not None:
+                await browser.close()
+            await client.aclose()
             await engine.dispose()
 
     app = FastAPI(

@@ -94,7 +94,8 @@ assert row == ('persisted',), row
 " || fail "data did not survive $1"
   docker logs "$NAME" 2>&1 | tail -n 20 | grep -q "Database is up to date" \
     || fail "database was not reported up to date after $1"
-  if docker exec "$NAME" sh -c 'ls /data/backups 2>/dev/null | grep -q .'; then
+  # Daily backups are expected; a pre-migration backup would mean the schema was migrated again.
+  if docker exec "$NAME" sh -c 'ls /data/backups 2>/dev/null | grep -q "^pre-migrate-"'; then
     fail "unexpected pre-migration backup after $1"
   fi
 }

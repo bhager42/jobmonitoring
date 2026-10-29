@@ -9,7 +9,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-import app.db.models
+import app.db.models  # noqa: F401  # pyright: ignore[reportUnusedImport] - for custom types
 ${imports if imports else ""}
 
 revision: str = ${repr(up_revision)}

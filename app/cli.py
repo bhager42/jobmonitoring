@@ -85,25 +85,14 @@ def reset_password(settings: Settings, *, from_stdin: bool) -> None:
 def make_fetch_context(
     settings: Settings, *, respect_robots: bool, render_mode: str
 ) -> "FetchContext":
-    from app.scraping.base import FetchContext
-    from app.scraping.browser import BrowserManager
-    from app.scraping.http import PoliteClient
+    from app.services.fetching import create_browser, create_http_client, make_context
 
-    client = PoliteClient(
-        allow_private=settings.allow_private_urls,
-        proxy=settings.outbound_proxy,
-        ca_bundle=str(settings.outbound_ca_bundle) if settings.outbound_ca_bundle else None,
-    )
-    browser = (
-        BrowserManager(client, executable_path=settings.chromium_executable)
-        if BrowserManager.installed()
-        else None
-    )
-    return FetchContext(
-        client=client,
-        browser=browser,
+    client = create_http_client(settings)
+    return make_context(
+        client,
+        create_browser(settings, client),
         respect_robots=respect_robots,
-        render_mode=render_mode,  # type: ignore[arg-type]
+        render_mode=render_mode,
     )
 
 
@@ -150,6 +139,8 @@ def configure_logging(settings: Settings) -> None:
         level=settings.log_level.upper(),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    # Alembic logs every plugin it loads at INFO; keep its migration messages, drop the noise.
+    logging.getLogger("alembic.runtime.plugins").setLevel(logging.WARNING)
 
 
 def serve(settings: Settings) -> None:

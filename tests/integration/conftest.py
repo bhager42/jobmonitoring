@@ -13,7 +13,8 @@ PASSWORD = "correct horse battery staple"
 
 
 def make_client(settings: Settings, **kwargs: Any) -> TestClient:
-    return TestClient(create_app(settings, failed_login_delay=0), follow_redirects=False, **kwargs)
+    app = create_app(settings, failed_login_delay=0, start_scheduler=False)
+    return TestClient(app, follow_redirects=False, **kwargs)
 
 
 def csrf_from(html: str) -> str:

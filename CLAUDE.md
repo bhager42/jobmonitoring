@@ -6,8 +6,8 @@ Self-hosted job-listing monitor that runs as a single Docker container on TrueNA
 - Implement one phase at a time. Lint, type checks, and tests must pass before each commit.
 
 ## Status
-- Phases 0–3 are done (scaffold; database and config; authentication and security baseline;
-  scraping engine). Next is Phase 4 (matching, check runner, scheduler).
+- Phases 0–4 are done (scaffold; database and config; authentication and security baseline;
+  scraping engine; matching, check runner and scheduler). Next is Phase 5 (web UI).
 
 ## Commands
 ```bash
@@ -80,6 +80,23 @@ GitHub Actions uses the defaults.
 - Browser tests use a real Chromium and skip if none can start. Locally, set `CHROMIUM_EXECUTABLE`
   (in the cloud sandbox: `/opt/pw-browsers/chromium-*/chrome-linux64/chrome`).
 
+## Checks and scheduling conventions
+- `app/matching/`: `Criteria` (Pydantic, stored as `monitors.criteria`) and the pure
+  `matches(PostingView, Criteria, now=...)`. Validate user input with `Criteria.model_validate` and
+  show its errors. The runner treats saved criteria that no longer validate as a failed check.
+- `app/services/checks.py` `CheckRunner.run(monitor_id)` does one check. It fetches outside any DB
+  transaction, then applies results in one short transaction. Fingerprints include the adapter
+  name. **When the UI changes a monitor's URL or adapter, reset `baseline_done=False`**, otherwise
+  every posting looks new and raises an alert.
+- `app/services/scheduler.py`: `app.state.scheduler`. For "Check now", call `request_check(id)`
+  (False means already queued or running). After creating or editing a monitor, call `wake()`
+  (or set `next_check_at=None` to make it due at once). `is_busy(id)` tells the UI a check is in
+  progress. Use `checks.is_backing_off(monitor)` to flag monitors in the UI.
+- Daily maintenance (`services/maintenance.py`) runs from the scheduler tick: it prunes 90-day-old
+  check runs and 180-day-old unmatched inactive postings, then backs up to `/data/backups/daily-*.db`.
+- Tests that build the app use `create_app(..., start_scheduler=False)` (see
+  `tests/integration/conftest.py`) unless they test the background loop on purpose.
+
 ## Database conventions
 - Models are in `app/db/models.py`. After changing them, autogenerate a migration, review it, and run
   `ruff format`. `tests/integration/test_migrations.py::test_models_match_migrations` fails if the
@@ -132,5 +149,18 @@ GitHub Actions uses the defaults.
 - **`OUTBOUND_PROXY` / `OUTBOUND_CA_BUNDLE` / `CHROMIUM_EXECUTABLE`** are advanced settings. With a
   proxy, only the pre-flight DNS check guards private addresses.
 - **Workday `postedOn` text becomes an approximate date.** "30+ Days Ago" becomes None.
+- **New column `monitors.alert_existing`** (migration `46cba8648788`) backs the plan's "include
+  existing matches as alerts" checkbox for the baseline check.
+- **Postings with no date pass `posted_within_days`.** Most sites don't publish dates, and the
+  posting is new to us.
+- **`locations_any: ["remote"]` also matches postings flagged remote**, even if their location
+  text doesn't say so.
+- **Whole-word matching uses `(?<!\w)term(?!\w)`**, not `\b`, so terms like "c++" and ".net" work.
+- **Zero-result safeguard:** if a check finds 0 postings where there used to be some, it records a
+  warning (monitor `last_status="warning"`, check run `ok` with a message) and marks nothing
+  missing. Failed checks never count toward "missing" either.
+- **Backoff:** from the 5th consecutive failure the interval doubles per failure, capped at 7 days
+  (or the monitor's own interval if that is longer). Jitter is ±10% on every schedule.
+- **Interrupted checks** (still `running` at startup) are closed as errors when the app starts.
 - **Static assets get `Cache-Control: no-cache`** (ETag revalidation) until Phase 5 adds hashed
   filenames for long-lived caching. Everything else gets `no-store`.
