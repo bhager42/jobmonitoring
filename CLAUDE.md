@@ -26,6 +26,17 @@ scripts/container-smoke-test.sh jobmonitor:dev  # what CI runs against the built
 `[tool.uv] exclude-newer` in `pyproject.toml` keeps every resolved package at least two weeks old.
 Move that date forward (and re-run `uv lock`) when updating dependencies.
 
+## Vulnerability handling
+- CI audits every locked Python package with pip-audit (OSV) and scans the built image with Grype
+  (high or critical, fixable). CI also runs daily, so a new advisory fails the build without a code change.
+- **Security fixes skip the two-week rule.** Add the package to `exclude-newer-package` in
+  `pyproject.toml` with a comment naming the advisory. Then run
+  `uv lock --upgrade-package <name>` and `uv sync`. Remove the entry once `exclude-newer` passes its date.
+- Dependabot's 14-day cooldown applies to version updates only; security updates are not delayed.
+  They need Dependabot alerts and security updates turned on in the repository settings.
+- To audit locally: `uv export --locked --all-groups --no-emit-project --no-hashes -o /tmp/req.txt`,
+  then `uvx pip-audit==2.10.1 -r /tmp/req.txt --no-deps --disable-pip`.
+
 ### Building in a Claude cloud sandbox
 Docker Hub is rate-limited and Debian apt mirrors are blocked there. Start `dockerd`, then build with
 `docker build --network host --build-arg BASE_REGISTRY=mirror.gcr.io/library --build-arg WITH_BROWSER=false -t jobmonitor:dev .`.

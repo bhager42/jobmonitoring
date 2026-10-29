@@ -1,3 +1,5 @@
+# The cooldowns delay routine version updates only. Security updates are not delayed; they
+# need Dependabot alerts and security updates turned on in the repository settings.
 version: 2
 updates:
   - package-ecosystem: uv

@@ -4,6 +4,10 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    # Daily, so newly published advisories are caught even when nothing in the repo changes.
+    - cron: "23 7 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,6 +32,21 @@ jobs:
       - run: uv run pyright
       - run: uv run pytest --cov --cov-report=term-missing
 
+  dependency-audit:
+    name: Python dependency vulnerabilities
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.1"
+      - name: Export locked dependencies (app and dev)
+        run: uv export --locked --all-groups --no-emit-project --no-hashes --output-file requirements-audit.txt
+      - name: pip-audit (OSV database, which includes GitHub and PyPI advisories)
+        run: >-
+          uvx pip-audit==2.10.1 --requirement requirements-audit.txt
+          --no-deps --disable-pip --vulnerability-service osv --strict --progress-spinner off
+
   image:
     name: Docker image
     runs-on: ubuntu-24.04
@@ -44,3 +63,11 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Container smoke test (UID 568, read-only root, healthcheck, /data persistence)
         run: scripts/container-smoke-test.sh jobmonitor:ci
+      - name: Scan image for vulnerable OS and Python packages
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: jobmonitor:ci
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true # fail only when a fixed version exists to upgrade to
+          output-format: table
