@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     def backup_dir(self) -> Path:
         return self.data_dir / "backups"
 
+    @property
+    def secrets_key_path(self) -> Path:
+        # Kept apart from the database so a database copy alone doesn't reveal stored secrets.
+        return self.data_dir / "notify.key"
+
 
 @lru_cache
 def get_settings() -> Settings:

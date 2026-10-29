@@ -6,8 +6,9 @@ Self-hosted job-listing monitor that runs as a single Docker container on TrueNA
 - Implement one phase at a time. Lint, type checks, and tests must pass before each commit.
 
 ## Status
-- Phases 0–5 are done (scaffold; database and config; authentication and security baseline;
-  scraping engine; matching, check runner and scheduler; web UI). Next is Phase 6 (notifications).
+- Phases 0–6 are done (scaffold; database and config; authentication and security baseline;
+  scraping engine; matching, check runner and scheduler; web UI; notifications).
+  Next is Phase 7 (packaging and release).
 
 ## Commands
 ```bash
@@ -105,6 +106,21 @@ GitHub Actions uses the defaults.
   text that can be long (URLs, paths) uses `overflow-wrap: anywhere`, so 320 px phones don't scroll
   sideways.
 
+## Notification conventions
+- `app/services/notify.py`. `Notifier.notify_matches` is the runner's `on_new_matches` callback and
+  never raises. It sends **one digest per check run** (max 20 items listed), never on a baseline
+  check, only if `monitor.notify` is on, to every enabled target. `Match.notified_at` is set only
+  after a successful delivery. The last success and failure are kept in the `settings` table
+  (`notify_last_sent`, `notify_last_error`) and shown on the Settings page.
+- `Sender` is a protocol. `AppriseSender` is the real one (Apprise is sync, so it runs in a thread).
+  Tests use `tests/integration/test_notify.FakeSender`. Route tests and the E2E journey also use
+  real Apprise against a local `json://` webhook.
+- Use `_apprise()` (typed `Any`) instead of importing Apprise directly; its hints are partially
+  untyped and fail Pyright strict.
+- Notification URLs are encrypted with `app/security/secrets.SecretBox`. **Never render a decrypted
+  URL**: show `sender.masked(url)`. Apprise's own logger is set to WARNING because it logs full URLs
+  at debug level.
+
 ## Checks and scheduling conventions
 - `app/matching/`: `Criteria` (Pydantic, stored as `monitors.criteria`) and the pure
   `matches(PostingView, Criteria, now=...)`. Validate user input with `Criteria.model_validate` and
@@ -194,6 +210,17 @@ GitHub Actions uses the defaults.
   results have `.keys()`; use a comprehension.
 - **`Match.posting` / `Match.monitor` relationships use `lazy="raise"`.** Load them with
   `joinedload` (`routes/matches.with_details`) so templates never trigger lazy I/O.
+- **The notification encryption key is a file, `/data/notify.key` (0600), not derived from
+  `secret_key`** (plan §6 suggested deriving it). The secret key lives in the database, so a
+  database copy (e.g. a downloaded backup) would otherwise contain both the encrypted URLs and the
+  means to decrypt them. If the key file is lost, targets show "saved by another install" and must
+  be re-added.
+- **Baseline checks never notify, even with `alert_existing`.** Those matches still appear in the
+  UI, but a first check can find dozens of them.
+- **Notification URLs are not SSRF-filtered.** The admin enters them, and LAN targets (self-hosted
+  ntfy, Gotify, Home Assistant) are a normal use. Only careers-page fetching is guarded.
+- **Failed notifications are not retried.** The matches stay in the UI, and the failure is shown
+  on the Settings page.
 - **E2E runs against `jobmonitor serve` in a subprocess**, not the Docker image (plan §13). The
   container smoke test covers the image separately.
 - **Static assets get `Cache-Control: no-cache`** (ETag revalidation) until Phase 5 adds hashed

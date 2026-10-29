@@ -1,5 +1,6 @@
 """End-to-end fixtures: a fake careers site, the real app in a subprocess, and headless Chromium."""
 
+import json
 import os
 import re
 import socket
@@ -71,6 +72,43 @@ def jobs_site() -> Iterator[JobsSite]:
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     yield site
+    server.shutdown()
+    server.server_close()
+
+
+@dataclass
+class Webhook:
+    """Receives Apprise json:// notifications."""
+
+    url: str = ""
+    received: list[dict[str, Any]] = field(default_factory=list[dict[str, Any]])
+
+    def wait_for(self, count: int, timeout: float = 20.0) -> list[dict[str, Any]]:
+        deadline = time.monotonic() + timeout
+        while len(self.received) < count and time.monotonic() < deadline:
+            time.sleep(0.1)
+        return self.received
+
+
+@pytest.fixture
+def webhook() -> Iterator[Webhook]:
+    hook = Webhook()
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            length = int(self.headers["Content-Length"])
+            hook.received.append(json.loads(self.rfile.read(length)))
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, format: str, *args: Any) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", free_port()), Handler)
+    hook.url = f"json://127.0.0.1:{server.server_address[1]}/hook"
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield hook
     server.shutdown()
     server.server_close()
 

@@ -238,6 +238,7 @@ def _apply_form(
     monitor.render_mode = form.render
     monitor.respect_robots = form.respect_robots
     monitor.alert_existing = form.alert_existing
+    monitor.notify = form.notify
     monitor.criteria = form.criteria.to_json()
 
     if source_changed:

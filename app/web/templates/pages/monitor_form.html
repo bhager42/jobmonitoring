@@ -56,6 +56,8 @@
     {{ text_field("interval_hours", "Check every (hours)", form.interval_hours, errors, type="number",
                   hint="Between 1 and 720. Checks are spread out by a few minutes either way.", attrs='min="1" max="720" required inputmode="numeric"') }}
     {{ checkbox("enabled", "Checking is on", form.enabled, errors) }}
+    {{ checkbox("notify", "Send notifications for new matches", form.notify, errors,
+                hint="Uses the notification targets in Settings. Matches always appear on the dashboard.") }}
     {{ checkbox("alert_existing", "Also alert on matches already listed when the monitor is first checked", form.alert_existing, errors,
                 hint="Off: the first check just records what's there, and only later postings alert you.") }}
 

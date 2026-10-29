@@ -17,14 +17,16 @@ from app.config import Settings, get_settings
 from app.db.engine import create_engine, create_session_factory
 from app.db.models import utcnow
 from app.security.headers import SecurityHeadersMiddleware
+from app.security.secrets import SecretBox
 from app.services.checks import CheckRunner, mark_interrupted_runs
 from app.services.fetching import context_factory, create_browser, create_http_client
 from app.services.maintenance import run_maintenance_if_due
+from app.services.notify import AppriseSender, Notifier
 from app.services.scheduler import Scheduler
 from app.web.api import v1
 from app.web.assets import STATIC_DIR, VersionedStaticFiles
 from app.web.preview import PreviewCache
-from app.web.routes import auth, health, matches, monitors, pages
+from app.web.routes import auth, health, matches, monitors, notifications, pages
 from app.web.templating import templates
 
 log = logging.getLogger(__name__)
@@ -58,7 +60,10 @@ def create_app(
                 log.warning("Marked %d check(s) interrupted by the last shutdown", interrupted)
         client = create_http_client(settings)
         browser = create_browser(settings, client)
-        runner = CheckRunner(factory, context_factory(client, browser))
+        notifier = Notifier(factory, SecretBox(settings.secrets_key_path), AppriseSender())
+        runner = CheckRunner(
+            factory, context_factory(client, browser), on_new_matches=notifier.notify_matches
+        )
         scheduler = Scheduler(
             factory,
             runner,
@@ -67,6 +72,7 @@ def create_app(
         )
         app.state.http_client, app.state.browser = client, browser
         app.state.runner, app.state.scheduler = runner, scheduler
+        app.state.notifier = notifier
         if start_scheduler:
             scheduler.start()
         try:
@@ -120,5 +126,6 @@ def create_app(
     app.include_router(pages.router)
     app.include_router(monitors.router)
     app.include_router(matches.router)
+    app.include_router(notifications.router)
     app.include_router(v1.router)
     return app

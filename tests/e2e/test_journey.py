@@ -7,7 +7,14 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Browser, Page, expect
 
-from tests.e2e.conftest import PASSWORD, AppServer, JobsSite, axe_violations, horizontal_overflow
+from tests.e2e.conftest import (
+    PASSWORD,
+    AppServer,
+    JobsSite,
+    Webhook,
+    axe_violations,
+    horizontal_overflow,
+)
 
 SCREENSHOTS = os.environ.get("E2E_SCREENSHOTS")  # set to a folder to keep screenshots
 
@@ -31,7 +38,7 @@ def audit(page: Page, name: str, problems: list[str]) -> None:
 
 
 def test_setup_monitor_check_and_match(
-    app_server: AppServer, jobs_site: JobsSite, browser: Browser
+    app_server: AppServer, jobs_site: JobsSite, webhook: Webhook, browser: Browser
 ) -> None:
     page = browser.new_page(viewport={"width": 1280, "height": 900})
     page.set_default_timeout(20_000)
@@ -49,6 +56,17 @@ def test_setup_monitor_check_and_match(
     page.get_by_role("button", name="Save and sign in").click()
     expect(page.get_by_role("heading", name="Dashboard", level=1)).to_be_visible()
     expect(page.get_by_role("link", name="Add a monitor")).to_be_visible()
+
+    # --- a notification target, checked with "Send test" -------------------------------------
+    page.get_by_role("link", name="Settings").click()
+    page.get_by_label("Name", exact=True).fill("Home webhook")
+    page.get_by_label("Notification URL").fill(webhook.url)
+    page.get_by_role("button", name="Add target").click()
+    expect(page.get_by_text("Notification target added")).to_be_visible()
+    page.get_by_role("button", name="Send test to Home webhook").click()
+    expect(page.get_by_text("Test sent. Check that it arrived.")).to_be_visible()
+    assert webhook.wait_for(1)[0]["title"] == "Job Monitor test"
+    audit(page, "settings", problems)
 
     # --- add a monitor, with detection and a live match preview ------------------------------
     page.get_by_role("link", name="Monitors", exact=True).click()
@@ -88,6 +106,12 @@ def test_setup_monitor_check_and_match(
     new_row = page.locator(".posting-list li", has_text="Night Nurse - Emergency")
     expect(new_row).to_contain_text("In your matches")
 
+    # One digest reached the webhook; the baseline check sent nothing.
+    messages = webhook.wait_for(2)
+    assert [m["title"] for m in messages] == ["Job Monitor test", "1 new match at Example Hospital"]
+    assert "Night Nurse - Emergency" in messages[1]["message"]
+    assert "Registered Nurse" not in messages[1]["message"]
+
     # --- the match is on the dashboard; mark it seen ---------------------------------------
     page.get_by_role("link", name="Dashboard").click()
     card = page.locator(".match-card", has_text="Night Nurse - Emergency")
@@ -109,7 +133,7 @@ def test_setup_monitor_check_and_match(
     )
     audit(page, "monitors", problems)
     page.goto(f"{app_server.url}/settings")
-    audit(page, "settings", problems)
+    expect(page.get_by_text("Last notification sent")).to_be_visible()
 
     # Sign out; the login page is checked too.
     page.get_by_role("button", name="Sign out").click()

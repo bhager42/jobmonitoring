@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import text_field %}
 {% block title %}Settings{% endblock %}
 {% block content %}
 <h1>Settings</h1>
@@ -31,6 +32,73 @@
 </section>
 
 <div class="stack-section">
+<section class="card" aria-labelledby="notifications-title" id="notifications">
+  <h2 id="notifications-title">Notifications</h2>
+  {% set messages = {"added": ("Notification target added. Use Send test to check it.", "success"),
+                     "removed": ("Notification target removed.", "success"),
+                     "test-ok": ("Test sent. Check that it arrived.", "success"),
+                     "test-failed": ("The test could not be delivered. Check the URL and the app log.", "error")} %}
+  {% if notify_status in messages %}
+    <p class="alert alert-{{ messages[notify_status][1] }}" role="status">{{ messages[notify_status][0] }}</p>
+  {% endif %}
+  <p>When a check finds new matches, Job Monitor sends one message listing them to every target below. The first check of a monitor never notifies.</p>
+  {% if last_error %}
+    <p class="alert alert-error">The last notification failed {{ last_error_at | relative }}: {{ last_error }}</p>
+  {% elif last_sent %}
+    <p class="muted">Last notification sent <time datetime="{{ last_sent | iso }}" title="{{ last_sent | local }}">{{ last_sent | relative }}</time>.</p>
+  {% endif %}
+
+  {% if targets %}
+  <ul class="target-list" role="list">
+    {% for target in targets %}
+    <li class="target{% if not target.enabled %} is-paused{% endif %}">
+      <div>
+        <strong>{{ target.name }}</strong>{% if not target.enabled %} <span class="badge">Paused</span>{% endif %}
+        <br><code class="small">{{ target.masked_url }}</code>
+      </div>
+      <div class="actions">
+        {% if target.readable %}
+        <form method="post" action="/settings/notifications/{{ target.id }}/test"
+              hx-post="/settings/notifications/{{ target.id }}/test" hx-target="#test-result-{{ target.id }}" hx-swap="outerHTML">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="button button-small button-secondary">Send test<span class="visually-hidden"> to {{ target.name }}</span></button>
+        </form>
+        {% endif %}
+        <form method="post" action="/settings/notifications/{{ target.id }}/toggle">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="button button-small button-secondary">{{ "Pause" if target.enabled else "Resume" }}<span class="visually-hidden"> {{ target.name }}</span></button>
+        </form>
+        <form method="post" action="/settings/notifications/{{ target.id }}/delete">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="button button-small button-danger">Remove<span class="visually-hidden"> {{ target.name }}</span></button>
+        </form>
+      </div>
+      <p class="small" id="test-result-{{ target.id }}" role="status"></p>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+    <p class="muted">No notification targets yet. Matches still appear on the dashboard.</p>
+  {% endif %}
+
+  <details{% if notify_errors or not targets %} open{% endif %}>
+    <summary>Add a notification target</summary>
+    {% if notify_errors %}
+    <div class="alert alert-error" role="alert" tabindex="-1" data-focus-on-load>
+      <ul>{% for name, message in notify_errors.items() %}<li><a href="#{{ name }}">{{ message }}</a></li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    <form method="post" action="/settings/notifications" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {{ text_field("notify_name", "Name", notify_values.get("name"), notify_errors, attrs='maxlength="100"', field_name="name") }}
+      {{ text_field("notify_url", "Notification URL", notify_values.get("url"), notify_errors,
+                    hint="Any Apprise URL, for example ntfy://my-job-alerts (ntfy.sh), discord://webhook_id/webhook_token, mailtos://user:app-password@gmail.com, pover://user_key@app_token (Pushover) or json://homeassistant.lan:8123/hook. It is stored encrypted.",
+                    attrs='autocomplete="off" spellcheck="false"', field_name="url") }}
+      <button type="submit" class="button">Add target</button>
+    </form>
+  </details>
+</section>
+
 <section class="card" aria-labelledby="backup-title">
   <h2 id="backup-title">Backups</h2>
   <p>A backup is saved every day to <code>{{ settings.backup_dir }}</code>; the newest {{ settings.backup_keep }} are kept.

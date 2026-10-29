@@ -12,10 +12,11 @@
   {% if errors.get(name) %}<p class="field-error" id="{{ name }}-error">{{ errors[name] }}</p>{% endif %}
 {% endmacro %}
 
-{% macro text_field(name, label, value, errors, hint="", type="text", attrs="") %}
+{# `name` is the element id (and error key); `field_name` overrides the submitted name. #}
+{% macro text_field(name, label, value, errors, hint="", type="text", attrs="", field_name=none) %}
 <div class="field{% if errors.get(name) %} has-error{% endif %}">
   <label for="{{ name }}">{{ label }}</label>
-  <input id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value if value is not none else '' }}" {{ attrs | safe }}{{ describedby(name, hint, errors) }}>
+  <input id="{{ name }}" name="{{ field_name or name }}" type="{{ type }}" value="{{ value if value is not none else '' }}" {{ attrs | safe }}{{ describedby(name, hint, errors) }}>
   {{ field_messages(name, hint, errors) }}
 </div>
 {% endmacro %}

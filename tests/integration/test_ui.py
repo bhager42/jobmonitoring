@@ -46,6 +46,7 @@ def form(csrf: str, **values: Any) -> dict[str, Any]:
         "enabled": "on",
         "respect_robots": "on",
         "title_only": "on",
+        "notify": "on",
         "render_mode": "auto",
     }
     data.update(values)

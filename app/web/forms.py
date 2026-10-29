@@ -39,6 +39,7 @@ class MonitorForm:
     render_mode: str = "auto"
     respect_robots: bool = True
     alert_existing: bool = False
+    notify: bool = True
     css: dict[str, str] = field(default_factory=dict[str, str])
     wait_selector: str = ""
     criteria_values: dict[str, Any] = field(default_factory=dict[str, Any])
@@ -67,6 +68,7 @@ class MonitorForm:
             render_mode=_text(form, "render_mode") or "auto",
             respect_robots="respect_robots" in form,
             alert_existing="alert_existing" in form,
+            notify="notify" in form,
             css={key: v for key in CSS_FIELDS if (v := _text(form, key))},
             wait_selector=_text(form, "wait_selector"),
             criteria_values=criteria,
@@ -92,6 +94,7 @@ class MonitorForm:
             render_mode=monitor.render_mode,
             respect_robots=monitor.respect_robots,
             alert_existing=monitor.alert_existing,
+            notify=monitor.notify,
             css={k: str(config[k]) for k in CSS_FIELDS if config.get(k)}
             if monitor.adapter == "css_selector"
             else {},

@@ -3,8 +3,8 @@
 import logging
 import random
 import time
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -63,9 +63,12 @@ class CheckResult:
     new_matches: int = 0
     baseline: bool = False
     message: str | None = None
+    match_ids: tuple[int, ...] = ()
 
 
 ContextFactory = Callable[[MonitorSnapshot], FetchContext]
+# Called after a check that created matches: (monitor_id, match_ids, baseline).
+MatchCallback = Callable[[int, tuple[int, ...], bool], Awaitable[None]]
 Clock = Callable[[], datetime]
 
 
@@ -107,9 +110,11 @@ class CheckRunner:
         *,
         clock: Clock = utcnow,
         rng: random.Random | None = None,
+        on_new_matches: MatchCallback | None = None,
     ) -> None:
         self.session_factory = session_factory
         self.context_factory = context_factory
+        self.on_new_matches = on_new_matches
         self.clock = clock
         self.rng = rng or random.Random()  # noqa: S311 - scheduling jitter, not security
         self._running: set[int] = set()
@@ -171,10 +176,18 @@ class CheckRunner:
                 return CheckResult(monitor_id, "skipped", message="Monitor was deleted.")
 
             result = CheckResult(monitor_id, status, message=message)
+            new_matches: list[Match] = []
             if outcome is not None:
-                result = await self._apply(db, monitor, outcome, now)
+                result = await self._apply(db, monitor, outcome, now, new_matches)
             self._finish(monitor, run, result, now, started)
             await db.commit()
+            result = replace(result, match_ids=tuple(m.id for m in new_matches))
+
+        if result.match_ids and self.on_new_matches is not None:
+            try:
+                await self.on_new_matches(monitor_id, result.match_ids, result.baseline)
+            except Exception:
+                log.exception("New-match callback failed for monitor %d", monitor_id)
 
         log.info(
             "Checked monitor %d: %s, %d postings, %d new, %d new matches%s",
@@ -188,7 +201,12 @@ class CheckRunner:
         return result
 
     async def _apply(
-        self, db: AsyncSession, monitor: Monitor, outcome: FetchOutcome, now: datetime
+        self,
+        db: AsyncSession,
+        monitor: Monitor,
+        outcome: FetchOutcome,
+        now: datetime,
+        created: list[Match],
     ) -> CheckResult:
         criteria = Criteria.from_json(monitor.criteria)
         adapter = outcome.config.adapter
@@ -230,14 +248,11 @@ class CheckRunner:
         for row, raw in new_rows:
             result = matches(PostingView.of(raw), criteria, now=now)
             if result.matched and alert:
-                db.add(
-                    Match(
-                        monitor_id=monitor.id,
-                        posting_id=row.id,
-                        reasons=result.reasons,
-                        matched_at=now,
-                    )
+                match = Match(
+                    monitor_id=monitor.id, posting_id=row.id, reasons=result.reasons, matched_at=now
                 )
+                db.add(match)
+                created.append(match)
                 new_matches += 1
 
         message = None

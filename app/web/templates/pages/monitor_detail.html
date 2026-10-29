@@ -30,6 +30,7 @@
     <dl class="criteria-list">
       <div><dt>Checks</dt><dd>{{ "every " ~ monitor.interval_hours ~ " hours" if monitor.enabled else "paused" }}</dd></div>
       <div><dt>Reading</dt><dd>{{ {"auto": "automatic", "static": "plain HTML only", "browser": "always with the browser"}[monitor.render_mode] }}{% if not monitor.respect_robots %}, ignoring robots.txt{% endif %}</dd></div>
+      <div><dt>Notifications</dt><dd>{{ "on" if monitor.notify else "off" }}</dd></div>
       <div><dt>Added</dt><dd><time datetime="{{ monitor.created_at | iso }}">{{ monitor.created_at | local("%Y-%m-%d") }}</time></dd></div>
     </dl>
   </section>

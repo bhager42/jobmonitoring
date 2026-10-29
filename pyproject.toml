@@ -18,6 +18,8 @@ dependencies = [
     "httpx[http2]>=0.28.1",
     "selectolax>=1.0.0",
     "regex>=2026.9.29",
+    "apprise>=2.0.1",
+    "cryptography>=50.0.2",
 ]
 
 [project.scripts]
