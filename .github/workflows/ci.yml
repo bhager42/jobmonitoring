@@ -42,17 +42,5 @@ jobs:
           tags: jobmonitor:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Smoke test (UID 568, read-only root, healthcheck)
-        run: |
-          docker run -d --name jm --init --read-only --tmpfs /tmp \
-            --cap-drop ALL --security-opt no-new-privileges:true \
-            -v jm-data:/data -p 8080:8080 jobmonitor:ci
-          for i in $(seq 1 30); do
-            status=$(docker inspect -f '{{.State.Health.Status}}' jm)
-            [ "$status" = healthy ] && break
-            sleep 2
-          done
-          docker logs jm
-          test "$status" = healthy
-          test "$(docker exec jm id -u)" = 568
-          curl -fsS http://127.0.0.1:8080/healthz | grep -q '"status":"ok"'
+      - name: Container smoke test (UID 568, read-only root, healthcheck, /data persistence)
+        run: scripts/container-smoke-test.sh jobmonitor:ci

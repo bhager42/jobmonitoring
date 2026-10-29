@@ -13,11 +13,12 @@ Self-hosted job-listing monitor that runs as a single Docker container on TrueNA
 uv sync                                  # install app + dev deps into .venv
 uv run ruff check . && uv run ruff format --check .
 uv run pyright
-uv run pytest --cov
+uv run pytest --cov                       # fails below 85% coverage
 DATA_DIR=./data uv run jobmonitor migrate  # apply migrations (serve also does this)
 DATA_DIR=./data uv run jobmonitor serve  # run without Docker on :8080
 DATA_DIR=./data uv run alembic revision --autogenerate -m "describe change"  # new migration
 docker compose -f compose.dev.yaml up --build   # run the hardened container on :8080
+scripts/container-smoke-test.sh jobmonitor:dev  # what CI runs against the built image
 ```
 
 `[tool.uv] exclude-newer` in `pyproject.toml` keeps every resolved package at least two weeks old.
