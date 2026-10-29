@@ -65,3 +65,39 @@ jobs:
           sbom: true
           provenance: mode=max
           cache-from: type=gha,scope=${{ matrix.variant }}
+
+  github-release:
+    name: GitHub release notes
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Create the release from this version's CHANGELOG entry
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          # The lines after "## [<version>]" up to the next "## [" heading.
+          awk -v v="$version" '
+            index($0, "## [" v "]") == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q . notes.md; then
+            echo "No CHANGELOG.md entry for $version" >&2
+            exit 1
+          fi
+          cat >> notes.md <<NOTES
+
+          ### Images
+          - \`ghcr.io/${GITHUB_REPOSITORY}:${version}\` (with the browser)
+          - \`ghcr.io/${GITHUB_REPOSITORY}:${version}-lite\` (without)
+
+          Install on TrueNAS SCALE with [docs/truenas-app.yaml](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/docs/truenas-app.yaml); see the README.
+          NOTES
+          prerelease=""
+          if [[ "$TAG" == *-* ]]; then prerelease="--prerelease"; fi
+          gh release create "$TAG" --verify-tag --title "Job Monitor ${version}" --notes-file notes.md $prerelease
