@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<section class="card card-narrow" aria-labelledby="page-title">
+  <h1 id="page-title">Sign in</h1>
+  {% include "_form_error.html" %}
+  <form method="post" action="/login" class="stack">
+    <input type="hidden" name="next" value="{{ next }}">
+    {# Lets password managers save the login; the app has a single account. #}
+    <input type="text" name="username" value="jobmonitor" autocomplete="username" hidden>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password"
+             required autofocus {% if error %}aria-describedby="form-error" aria-invalid="true"{% endif %}>
+    </div>
+    <button type="submit" class="button">Sign in</button>
+  </form>
+  <p class="hint">Forgot it? Run <code>jobmonitor reset-password</code> in the app's shell.</p>
+</section>
+{% endblock %}

@@ -83,3 +83,51 @@ def test_migrate_command_reports_too_new_database(
             main(["migrate"])
     finally:
         get_settings.cache_clear()
+
+
+def test_reset_password_from_stdin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import io
+    import sqlite3
+
+    from app.auth.passwords import verify_password
+    from app.cli import main
+    from app.config import get_settings
+
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    try:
+        main(["migrate"])
+        with sqlite3.connect(tmp_path / "jobmonitor.db") as conn:
+            conn.execute(
+                "INSERT INTO sessions (id, created_at, last_seen_at, expires_at) "
+                "VALUES ('s', '2026-01-01', '2026-01-01', '2099-01-01')"
+            )
+        conn.close()
+        monkeypatch.setattr("sys.stdin", io.StringIO("a whole new password\n"))
+        main(["reset-password", "--password-stdin"])
+    finally:
+        get_settings.cache_clear()
+
+    conn = sqlite3.connect(tmp_path / "jobmonitor.db")
+    (stored,) = conn.execute("SELECT value FROM settings WHERE key = 'password_hash'").fetchone()
+    (sessions,) = conn.execute("SELECT count(*) FROM sessions").fetchone()
+    conn.close()
+    assert verify_password(stored, "a whole new password")
+    assert sessions == 0
+
+
+def test_reset_password_prompts_and_validates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.cli import main
+    from app.config import get_settings
+
+    answers = iter(["first password!!", "second password!"])
+    monkeypatch.setattr("getpass.getpass", lambda _prompt: next(answers))
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(SystemExit, match="do not match"):
+            main(["reset-password"])
+    finally:
+        get_settings.cache_clear()

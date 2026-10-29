@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Set up{% endblock %}
+{% block content %}
+<section class="card card-narrow" aria-labelledby="page-title">
+  <h1 id="page-title">Welcome</h1>
+  <p>Choose the password you'll use to sign in. To prove you run this server, paste the setup
+     token printed in the container log (on TrueNAS: <em>Apps → Job Monitor → Logs</em>).</p>
+  {% include "_form_error.html" %}
+  <form method="post" action="/setup" class="stack">
+    <div class="field">
+      <label for="token">Setup token</label>
+      <input id="token" name="token" type="text" autocomplete="off" spellcheck="false" required
+             value="{{ token }}" {% if not token %}autofocus{% endif %}>
+    </div>
+    <input type="text" name="username" value="jobmonitor" autocomplete="username" hidden>
+    <div class="field">
+      <label for="password">New password</label>
+      <input id="password" name="password" type="password" autocomplete="new-password"
+             minlength="12" required aria-describedby="password-hint" {% if token %}autofocus{% endif %}>
+      <p class="hint" id="password-hint">At least 12 characters. A few random words work well.</p>
+    </div>
+    <div class="field">
+      <label for="confirm">Confirm password</label>
+      <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="12" required>
+    </div>
+    <button type="submit" class="button">Save and sign in</button>
+  </form>
+</section>
+{% endblock %}

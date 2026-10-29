@@ -1,0 +1,230 @@
+/* Job Monitor stylesheet. No framework; Baseline 2026 CSS only. */
+@layer reset, base, components, utilities;
+
+@layer reset {
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; }
+  body { min-block-size: 100dvh; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  img, svg { display: block; max-inline-size: 100%; }
+  input, button, textarea, select { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+
+    /* Design tokens */
+    --color-bg: light-dark(#f6f7f9, #111418);
+    --color-surface: light-dark(#ffffff, #1b2027);
+    --color-text: light-dark(#1b1f24, #e7eaee);
+    --color-muted: light-dark(#59636e, #a3adb8);
+    --color-border: light-dark(#d4d9df, #333b45);
+    --color-accent: light-dark(#1f5fbf, #7cb0ff);
+    --color-accent-contrast: light-dark(#ffffff, #0b1220);
+    --color-focus: light-dark(#0b57d0, #a8c7fa);
+    --color-error-bg: light-dark(#fdecea, #3b1d1b);
+    --color-error-text: light-dark(#8a1c12, #ffb4a9);
+    --color-success-bg: light-dark(#e6f4ea, #15301d);
+    --color-success-text: light-dark(#1e5631, #9fd8ae);
+
+    --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --step-0: clamp(1rem, 0.95rem + 0.25vw, 1.0625rem);
+    --step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.4rem);
+    --step-2: clamp(1.5rem, 1.3rem + 1vw, 2rem);
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 1rem;
+    --space-4: 1.5rem;
+    --space-5: 2.5rem;
+    --radius: 0.5rem;
+    --content-width: 64rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @view-transition { navigation: auto; }
+  }
+
+  body {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: var(--step-0);
+  }
+
+  h1, h2, h3 { line-height: 1.2; text-wrap: balance; }
+  h1 { font-size: var(--step-2); margin-block-end: var(--space-4); }
+  h2 { font-size: var(--step-1); margin-block-end: var(--space-3); }
+  p { text-wrap: pretty; }
+  code { font-family: var(--font-mono); font-size: 0.9em; }
+
+  a {
+    color: var(--color-accent);
+    text-underline-offset: 0.15em;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  main {
+    inline-size: min(100% - 2rem, var(--content-width));
+    margin-inline: auto;
+    padding-block: var(--space-5);
+
+    &:focus { outline: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .skip-link {
+    position: absolute;
+    inset-inline-start: var(--space-3);
+    inset-block-start: -10rem;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-surface);
+    border: 2px solid var(--color-focus);
+    border-radius: var(--radius);
+    z-index: 10;
+
+    &:focus { inset-block-start: var(--space-3); }
+  }
+
+  .site-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) max(1rem, (100% - var(--content-width)) / 2);
+    background: var(--color-surface);
+    border-block-end: 1px solid var(--color-border);
+
+    & ul {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+      list-style: none;
+      padding: 0;
+    }
+
+    & a[aria-current="page"] { font-weight: 600; text-decoration-thickness: 2px; }
+  }
+
+  .brand {
+    font-weight: 700;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .site-footer {
+    padding: var(--space-3);
+    color: var(--color-muted);
+    font-size: 0.875rem;
+    text-align: center;
+  }
+
+  .card {
+    container-type: inline-size;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--space-4);
+
+    & + & { margin-block-start: var(--space-4); }
+  }
+
+  .card-narrow {
+    max-inline-size: 28rem;
+    margin-inline: auto;
+  }
+
+  .stack {
+    display: grid;
+    gap: var(--space-3);
+    margin-block: var(--space-3);
+  }
+
+  .field {
+    display: grid;
+    gap: var(--space-1);
+
+    & label { font-weight: 600; }
+
+    & input {
+      min-block-size: 2.75rem;
+      padding: var(--space-2) var(--space-3);
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+    }
+
+    & input[aria-invalid="true"] { border-color: var(--color-error-text); }
+  }
+
+  /* Tie the label to its input while the input has keyboard focus. */
+  .field:has(input:focus-visible) label { color: var(--color-accent); }
+
+  .hint {
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+
+  .button {
+    justify-self: start;
+    min-block-size: 2.75rem;
+    padding-inline: var(--space-4);
+    background: var(--color-accent);
+    color: var(--color-accent-contrast);
+    border: 0;
+    border-radius: var(--radius);
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover { filter: brightness(1.1); }
+  }
+
+  .link-button {
+    min-block-size: 1.5rem;
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    cursor: pointer;
+  }
+
+  .alert {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius);
+    margin-block: var(--space-3);
+  }
+
+  .alert-error { background: var(--color-error-bg); color: var(--color-error-text); }
+  .alert-success { background: var(--color-success-bg); color: var(--color-success-text); }
+}
+
+@layer utilities {
+  .visually-hidden {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

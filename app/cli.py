@@ -1,6 +1,9 @@
 """`jobmonitor` command-line entry point."""
 
 import argparse
+import asyncio
+import getpass
+import logging
 import os
 import sys
 import tempfile
@@ -41,9 +44,50 @@ def migrate(settings: Settings) -> None:
     print(f"Migrated database from {result.from_revision or 'empty'} to {result.to_revision}.")
 
 
+async def _store_password(settings: Settings, password: str) -> None:
+    from app.auth.passwords import hash_password
+    from app.auth.sessions import delete_all_sessions
+    from app.db.engine import create_engine, create_session_factory
+    from app.services.app_settings import PASSWORD_HASH, set_setting
+
+    engine = create_engine(settings.db_path)
+    try:
+        async with create_session_factory(engine)() as db:
+            await set_setting(db, PASSWORD_HASH, hash_password(password))
+            await delete_all_sessions(db)  # commits both changes
+    finally:
+        await engine.dispose()
+
+
+def reset_password(settings: Settings, *, from_stdin: bool) -> None:
+    from app.auth.passwords import PasswordPolicyError, validate_new_password
+
+    migrate(settings)
+    if from_stdin:
+        password = sys.stdin.readline().rstrip("\r\n")
+        confirm = None
+    else:
+        password = getpass.getpass("New password: ")
+        confirm = getpass.getpass("Confirm new password: ")
+    try:
+        validate_new_password(password, confirm)
+    except PasswordPolicyError as exc:
+        sys.exit(f"ERROR: {exc}")
+    asyncio.run(_store_password(settings, password))
+    print("Password changed. All sessions have been signed out.")
+
+
+def configure_logging(settings: Settings) -> None:
+    logging.basicConfig(
+        level=settings.log_level.upper(),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
+
 def serve(settings: Settings) -> None:
     import uvicorn
 
+    configure_logging(settings)
     migrate(settings)
     uvicorn.run(
         "app.main:create_app",
@@ -64,12 +108,20 @@ def main(argv: list[str] | None = None) -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("serve", help="Apply database migrations, then run the web server")
     sub.add_parser("migrate", help="Apply database migrations and exit")
+    reset = sub.add_parser("reset-password", help="Set a new password and sign out every session")
+    reset.add_argument(
+        "--password-stdin",
+        action="store_true",
+        help="Read the new password from standard input instead of prompting",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "serve":
         serve(get_settings())
     elif args.command == "migrate":
         migrate(get_settings())
+    elif args.command == "reset-password":
+        reset_password(get_settings(), from_stdin=args.password_stdin)
 
 
 if __name__ == "__main__":

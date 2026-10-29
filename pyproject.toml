@@ -12,6 +12,9 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.1.4",
     "aiosqlite>=0.22.1",
     "alembic>=1.20.0",
+    "argon2-cffi>=25.1.0",
+    "jinja2>=3.1.6",
+    "python-multipart>=0.0.32",
 ]
 
 [project.scripts]
@@ -40,6 +43,10 @@ packages = ["app"]
 [tool.uv]
 # Only resolve releases that are at least two weeks old. Move this date forward when updating dependencies.
 exclude-newer = "2026-10-15T00:00:00Z"
+# Security exceptions to the two-week rule. Each entry names the advisory; remove the entry once
+# exclude-newer above moves past its date.
+#   certifi: GHSA-6q48-6c7w-9gw2 (compromised emSign intermediate CAs), fixed in 2026.10.18.
+exclude-newer-package = { certifi = "2026-10-21T00:00:00Z" }
 
 [tool.ruff]
 line-length = 100
@@ -50,7 +57,7 @@ extend-exclude = ["docs"]
 select = ["E", "W", "F", "I", "B", "UP", "S", "SIM", "RUF", "ASYNC", "PTH", "DTZ"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]
+"tests/**" = ["S101", "S105", "S106"]
 "app/db/migrations/versions/**" = ["E501"]
 
 [tool.pyright]

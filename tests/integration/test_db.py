@@ -11,6 +11,7 @@ from app.config import Settings
 from app.db.engine import get_session
 from app.db.models import Match, Monitor, Posting, Setting
 from app.main import create_app
+from tests.integration.conftest import login
 
 
 @pytest.mark.parametrize(
@@ -108,8 +109,8 @@ async def test_naive_datetimes_rejected(session: AsyncSession) -> None:
         await session.commit()
 
 
-def test_app_lifespan_provides_sessions(migrated_settings: Settings) -> None:
-    app = create_app(migrated_settings)
+def test_app_lifespan_provides_sessions(password_settings: Settings) -> None:
+    app = create_app(password_settings, failed_login_delay=0)
 
     @app.get("/test-db")
     async def read_db(session: AsyncSession = Depends(get_session)) -> dict[str, int]:  # noqa: B008
@@ -118,5 +119,7 @@ def test_app_lifespan_provides_sessions(migrated_settings: Settings) -> None:
         count = (await session.execute(select(func.count()).select_from(Setting))).scalar_one()
         return {"settings": count}
 
-    with TestClient(app) as client:
-        assert client.get("/test-db").json() == {"settings": 1}
+    with TestClient(app, follow_redirects=False) as client:
+        login(client)
+        # secret_key + password_hash from bootstrap, plus the row this route adds
+        assert client.get("/test-db").json() == {"settings": 3}

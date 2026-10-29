@@ -52,6 +52,14 @@ import json, urllib.request
 body = json.load(urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=4))
 assert body['status'] == 'ok', body
 " || fail "/healthz did not return ok"
+in_container "
+import urllib.request
+for path in ('/setup', '/static/css/app.css'):
+    with urllib.request.urlopen('http://127.0.0.1:8080' + path, timeout=4) as response:
+        assert response.status == 200, path
+        assert response.headers['Content-Security-Policy'], path
+" || fail "templates or static files are missing from the image"
+docker logs "$NAME" 2>&1 | grep -q "Setup token: " || fail "setup token not logged"
 docker logs "$NAME" 2>&1 | grep -q "Migrated database from empty" || fail "no initial migration"
 in_container "
 import sqlite3

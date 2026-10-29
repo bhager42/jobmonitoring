@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+<section class="card" aria-labelledby="password-title">
+  <h2 id="password-title">Change password</h2>
+  {% if changed %}
+  <p class="alert alert-success" role="status">Password changed. Other devices have been signed out.</p>
+  {% endif %}
+  {% include "_form_error.html" %}
+  <form method="post" action="/settings/password" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="text" name="username" value="jobmonitor" autocomplete="username" hidden>
+    <div class="field">
+      <label for="current">Current password</label>
+      <input id="current" name="current" type="password" autocomplete="current-password" required>
+    </div>
+    <div class="field">
+      <label for="password">New password</label>
+      <input id="password" name="password" type="password" autocomplete="new-password"
+             minlength="12" required aria-describedby="password-hint">
+      <p class="hint" id="password-hint">At least 12 characters. Changing it signs out every other device.</p>
+    </div>
+    <div class="field">
+      <label for="confirm">Confirm new password</label>
+      <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="12" required>
+    </div>
+    <button type="submit" class="button">Change password</button>
+  </form>
+</section>
+{% endblock %}
