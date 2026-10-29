@@ -25,10 +25,26 @@ def ensure_data_dir_writable(data_dir: Path) -> None:
         )
 
 
+def migrate(settings: Settings) -> None:
+    from app.db.migrate import DatabaseTooNewError, upgrade_to_head
+
+    ensure_data_dir_writable(settings.data_dir)
+    try:
+        result = upgrade_to_head(settings)
+    except DatabaseTooNewError as exc:
+        sys.exit(f"ERROR: {exc}")
+    if not result.changed:
+        print(f"Database is up to date (revision {result.to_revision}).")
+        return
+    if result.backup is not None:
+        print(f"Backed up database to {result.backup}")
+    print(f"Migrated database from {result.from_revision or 'empty'} to {result.to_revision}.")
+
+
 def serve(settings: Settings) -> None:
     import uvicorn
 
-    ensure_data_dir_writable(settings.data_dir)
+    migrate(settings)
     uvicorn.run(
         "app.main:create_app",
         factory=True,
@@ -46,11 +62,14 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="jobmonitor", description="Job Monitor")
     parser.add_argument("--version", action="version", version=__version__)
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("serve", help="Run the web server")
+    sub.add_parser("serve", help="Apply database migrations, then run the web server")
+    sub.add_parser("migrate", help="Apply database migrations and exit")
 
     args = parser.parse_args(argv)
     if args.command == "serve":
         serve(get_settings())
+    elif args.command == "migrate":
+        migrate(get_settings())
 
 
 if __name__ == "__main__":

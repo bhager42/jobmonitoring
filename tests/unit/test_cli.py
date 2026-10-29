@@ -40,7 +40,46 @@ def test_serve_runs_single_worker_uvicorn(tmp_path: Path, monkeypatch: pytest.Mo
         get_settings.cache_clear()
 
     assert len(calls) == 1
+    assert (tmp_path / "jobmonitor.db").exists()  # migrated before starting the server
     assert calls[0]["port"] == 9000
     assert calls[0]["workers"] == 1
     assert calls[0]["proxy_headers"] is False
     assert calls[0]["forwarded_allow_ips"] is None
+
+
+def test_migrate_command_is_idempotent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from app.cli import main
+    from app.config import get_settings
+
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    try:
+        main(["migrate"])
+        assert "Migrated database from empty" in capsys.readouterr().out
+        main(["migrate"])
+        assert "Database is up to date" in capsys.readouterr().out
+    finally:
+        get_settings.cache_clear()
+
+
+def test_migrate_command_reports_too_new_database(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sqlite3
+
+    from app.cli import main
+    from app.config import get_settings
+
+    with sqlite3.connect(tmp_path / "jobmonitor.db") as conn:
+        conn.execute("CREATE TABLE alembic_version (version_num VARCHAR(32) PRIMARY KEY)")
+        conn.execute("INSERT INTO alembic_version VALUES ('ffffffffffff')")
+    conn.close()
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(SystemExit, match="newer image"):
+            main(["migrate"])
+    finally:
+        get_settings.cache_clear()
