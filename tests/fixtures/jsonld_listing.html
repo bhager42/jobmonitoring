@@ -1,0 +1,47 @@
+<!doctype html>
+<html><head>
+<title>Open roles</title>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {"@type": "Organization", "name": "Example Corp"},
+    {
+      "@type": "ItemList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "item": {
+            "@type": "JobPosting",
+            "title": "Warehouse Associate",
+            "url": "https://careers.example.com/jobs/wa-17",
+            "identifier": {"@type": "PropertyValue", "name": "Example Corp", "value": "WA-17"},
+            "datePosted": "2026-10-12",
+            "employmentType": ["FULL_TIME", "TEMPORARY"],
+            "jobLocation": {"@type": "Place", "address": {"@type": "PostalAddress", "addressLocality": "Aurora", "addressRegion": "CO", "addressCountry": {"@type": "Country", "name": "US"}}},
+            "description": "<p>Pick &amp; pack orders.</p>",
+            "hiringOrganization": {"@type": "Organization", "name": "Example Corp"}
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "item": {
+            "@type": ["JobPosting"],
+            "title": "Support Engineer",
+            "url": "https://careers.example.com/jobs/se-3",
+            "identifier": "SE-3",
+            "datePosted": "2026-10-20T09:00:00-06:00",
+            "employmentType": "FULL_TIME",
+            "jobLocationType": "TELECOMMUTE",
+            "applicantLocationRequirements": {"@type": "Country", "name": "USA"}
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">{ this is not valid json </script>
+</head><body><h1>Open roles</h1></body></html>

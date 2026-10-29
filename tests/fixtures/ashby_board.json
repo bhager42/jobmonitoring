@@ -1,0 +1,61 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "b1f6e0a4-0000-4a1b-8c55-000000000001",
+      "title": "Machine Learning Engineer",
+      "department": "Research",
+      "team": "Applied ML",
+      "employmentType": "FullTime",
+      "location": "New York, NY",
+      "secondaryLocations": [
+        {
+          "location": "Remote (US)",
+          "address": {
+            "postalAddress": {
+              "addressCountry": "United States"
+            }
+          }
+        }
+      ],
+      "publishedAt": "2026-10-02T15:04:05.000+00:00",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "Hybrid",
+      "address": {
+        "postalAddress": {
+          "addressLocality": "New York",
+          "addressRegion": "NY",
+          "addressCountry": "United States"
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/examplecorp/b1f6e0a4-0000-4a1b-8c55-000000000001",
+      "applyUrl": "https://jobs.ashbyhq.com/examplecorp/b1f6e0a4-0000-4a1b-8c55-000000000001/application",
+      "descriptionHtml": "<p>Train models.</p>",
+      "descriptionPlain": "Train models.",
+      "compensation": {
+        "compensationTierSummary": "$180K \u2013 $240K"
+      }
+    },
+    {
+      "id": "b1f6e0a4-0000-4a1b-8c55-000000000002",
+      "title": "Customer Success Manager",
+      "department": "Go To Market",
+      "employmentType": "PartTime",
+      "location": "Remote",
+      "secondaryLocations": [],
+      "publishedAt": "2026-10-10T08:00:00.000+00:00",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "jobUrl": "https://jobs.ashbyhq.com/examplecorp/b1f6e0a4-0000-4a1b-8c55-000000000002",
+      "descriptionPlain": "Help customers."
+    },
+    {
+      "id": "b1f6e0a4-0000-4a1b-8c55-000000000003",
+      "title": "Internal Transfer Only",
+      "isListed": false,
+      "jobUrl": "https://jobs.ashbyhq.com/examplecorp/b1f6e0a4-0000-4a1b-8c55-000000000003"
+    }
+  ]
+}

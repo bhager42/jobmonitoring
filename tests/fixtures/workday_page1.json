@@ -1,0 +1,25 @@
+{
+  "total": 3,
+  "jobPostings": [
+    {
+      "title": "Software Engineer II",
+      "externalPath": "/job/Denver-CO/Software-Engineer-II_JR-0001234",
+      "locationsText": "Denver, CO",
+      "postedOn": "Posted Today",
+      "bulletFields": [
+        "JR-0001234"
+      ]
+    },
+    {
+      "title": "Staff Data Engineer",
+      "externalPath": "/job/US-Remote/Staff-Data-Engineer_JR-0001235",
+      "locationsText": "US - Remote",
+      "postedOn": "Posted 3 Days Ago",
+      "bulletFields": [
+        "JR-0001235"
+      ]
+    }
+  ],
+  "facets": [],
+  "userAuthenticated": false
+}

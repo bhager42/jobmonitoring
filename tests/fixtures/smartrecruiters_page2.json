@@ -1,0 +1,58 @@
+{
+  "offset": 2,
+  "limit": 2,
+  "totalFound": 3,
+  "content": [
+    {
+      "id": "7440000900003",
+      "name": "Controller",
+      "uuid": "00000000-0000-0000-0000-000000000003",
+      "refNumber": "REF3",
+      "company": {
+        "identifier": "ExampleCorp",
+        "name": "Example Corp"
+      },
+      "releasedDate": "2026-10-05T14:23:11.000Z",
+      "location": {
+        "city": "Golden",
+        "region": "CO",
+        "country": "us",
+        "remote": false,
+        "latitude": "39.7",
+        "longitude": "-104.9",
+        "fullLocation": "Golden, CO, United States"
+      },
+      "industry": {
+        "id": "financial_services",
+        "label": "Financial Services"
+      },
+      "department": {
+        "id": "1",
+        "label": "Accounting"
+      },
+      "function": {
+        "id": "accounting",
+        "label": "Accounting"
+      },
+      "typeOfEmployment": {
+        "id": "permanent",
+        "label": "Full-time"
+      },
+      "experienceLevel": {
+        "id": "mid_senior_level",
+        "label": "Mid-Senior Level"
+      },
+      "customField": [],
+      "visibility": "PUBLIC",
+      "ref": "https://api.smartrecruiters.com/v1/companies/ExampleCorp/postings/7440000900003",
+      "creator": {
+        "name": "Recruiter"
+      },
+      "language": {
+        "code": "en",
+        "label": "English",
+        "labelNative": "English (US)"
+      }
+    }
+  ]
+}

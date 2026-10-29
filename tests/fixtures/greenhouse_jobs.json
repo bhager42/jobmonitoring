@@ -1,0 +1,75 @@
+{
+  "jobs": [
+    {
+      "absolute_url": "https://job-boards.greenhouse.io/examplecorp/jobs/4012345007",
+      "data_compliance": [
+        {
+          "type": "gdpr",
+          "requires_consent": false,
+          "requires_processing_consent": false,
+          "requires_retention_consent": false,
+          "retention_period": null
+        }
+      ],
+      "internal_job_id": 4001234007,
+      "location": {
+        "name": "Remote - US"
+      },
+      "metadata": null,
+      "id": 4012345007,
+      "updated_at": "2026-10-01T12:00:00-04:00",
+      "requisition_id": "ENG-101",
+      "title": "Senior Backend Engineer (Python)",
+      "company_name": "Example Corp",
+      "first_published": "2026-09-15T10:00:00-04:00",
+      "language": "en",
+      "content": "&lt;h2&gt;About the role&lt;/h2&gt;&lt;p&gt;Build &amp;amp; run our &lt;strong&gt;Python&lt;/strong&gt; services.&lt;/p&gt;",
+      "departments": [
+        {
+          "id": 4011,
+          "name": "Engineering",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ],
+      "offices": [
+        {
+          "id": 4021,
+          "name": "Remote",
+          "location": "United States",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ]
+    },
+    {
+      "absolute_url": "https://job-boards.greenhouse.io/examplecorp/jobs/4012345008",
+      "internal_job_id": 4001234008,
+      "location": {
+        "name": "Denver, CO"
+      },
+      "metadata": null,
+      "id": 4012345008,
+      "updated_at": "2026-10-20T09:30:00-04:00",
+      "requisition_id": "DES-7",
+      "title": "Product Designer",
+      "company_name": "Example Corp",
+      "first_published": null,
+      "language": "en",
+      "content": "&lt;p&gt;Design things.&lt;/p&gt;",
+      "departments": [],
+      "offices": []
+    },
+    {
+      "id": 4012345009,
+      "title": "",
+      "absolute_url": "https://job-boards.greenhouse.io/examplecorp/jobs/4012345009",
+      "location": {
+        "name": "Austin, TX"
+      }
+    }
+  ],
+  "meta": {
+    "total": 3
+  }
+}

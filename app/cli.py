@@ -3,14 +3,19 @@
 import argparse
 import asyncio
 import getpass
+import json
 import logging
 import os
 import sys
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from app import __version__
 from app.config import Settings, get_settings
+
+if TYPE_CHECKING:
+    from app.scraping.base import FetchContext
 
 
 def ensure_data_dir_writable(data_dir: Path) -> None:
@@ -77,6 +82,69 @@ def reset_password(settings: Settings, *, from_stdin: bool) -> None:
     print("Password changed. All sessions have been signed out.")
 
 
+def make_fetch_context(
+    settings: Settings, *, respect_robots: bool, render_mode: str
+) -> "FetchContext":
+    from app.scraping.base import FetchContext
+    from app.scraping.browser import BrowserManager
+    from app.scraping.http import PoliteClient
+
+    client = PoliteClient(
+        allow_private=settings.allow_private_urls,
+        proxy=settings.outbound_proxy,
+        ca_bundle=str(settings.outbound_ca_bundle) if settings.outbound_ca_bundle else None,
+    )
+    browser = (
+        BrowserManager(client, executable_path=settings.chromium_executable)
+        if BrowserManager.installed()
+        else None
+    )
+    return FetchContext(
+        client=client,
+        browser=browser,
+        respect_robots=respect_robots,
+        render_mode=render_mode,  # type: ignore[arg-type]
+    )
+
+
+async def _probe(settings: Settings, args: argparse.Namespace) -> None:
+    from app.scraping.base import FetchError
+    from app.scraping.detect import detect
+
+    ctx = make_fetch_context(
+        settings, respect_robots=not args.ignore_robots, render_mode=args.render
+    )
+    css = {
+        "item_selector": args.item_selector,
+        "title_selector": args.title_selector,
+        "link_selector": args.link_selector,
+        "location_selector": args.location_selector,
+    }
+    try:
+        outcome = await detect(args.url, ctx, css={k: v for k, v in css.items() if v} or None)
+    except FetchError as exc:
+        sys.exit(f"ERROR: {exc}")
+    finally:
+        if ctx.browser is not None:
+            await ctx.browser.close()
+        await ctx.client.aclose()
+
+    params = json.dumps(outcome.config.params) if outcome.config.params else ""
+    print(f"Adapter:   {outcome.config.adapter} {params}".rstrip())
+    print(f"Rendered:  {'yes (browser)' if outcome.rendered else 'no (static HTML or API)'}")
+    print(f"Postings:  {len(outcome.postings)}")
+    for number, posting in enumerate(outcome.postings[: args.limit], start=1):
+        details = [d for d in (posting.location, posting.department) if d]
+        if posting.remote:
+            details.append("remote")
+        if posting.posted_at:
+            details.append(f"posted {posting.posted_at:%Y-%m-%d}")
+        print(f"{number:>4}. {posting.title}" + (f"  [{' · '.join(details)}]" if details else ""))
+        print(f"      {posting.url}")
+    if len(outcome.postings) > args.limit:
+        print(f"      ... and {len(outcome.postings) - args.limit} more")
+
+
 def configure_logging(settings: Settings) -> None:
     logging.basicConfig(
         level=settings.log_level.upper(),
@@ -115,6 +183,18 @@ def main(argv: list[str] | None = None) -> None:
         help="Read the new password from standard input instead of prompting",
     )
 
+    probe = sub.add_parser(
+        "probe", help="Detect how to read a careers page and print the postings found"
+    )
+    probe.add_argument("url")
+    probe.add_argument("--render", choices=("auto", "static", "browser"), default="auto")
+    probe.add_argument("--ignore-robots", action="store_true", help="Do not obey robots.txt")
+    probe.add_argument("--limit", type=int, default=20, help="How many postings to print")
+    probe.add_argument("--item-selector", help="CSS selector for each posting")
+    probe.add_argument("--title-selector", help="CSS selector for the title within an item")
+    probe.add_argument("--link-selector", help="CSS selector for the link within an item")
+    probe.add_argument("--location-selector", help="CSS selector for the location")
+
     args = parser.parse_args(argv)
     if args.command == "serve":
         serve(get_settings())
@@ -122,6 +202,10 @@ def main(argv: list[str] | None = None) -> None:
         migrate(get_settings())
     elif args.command == "reset-password":
         reset_password(get_settings(), from_stdin=args.password_stdin)
+    elif args.command == "probe":
+        settings = get_settings()
+        logging.basicConfig(level="WARNING", format="%(levelname)s %(name)s: %(message)s")
+        asyncio.run(_probe(settings, args))
 
 
 if __name__ == "__main__":

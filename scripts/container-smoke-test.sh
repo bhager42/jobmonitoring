@@ -60,6 +60,23 @@ for path in ('/setup', '/static/css/app.css'):
         assert response.headers['Content-Security-Policy'], path
 " || fail "templates or static files are missing from the image"
 docker logs "$NAME" 2>&1 | grep -q "Setup token: " || fail "setup token not logged"
+
+if docker exec "$NAME" python -c "import playwright" 2>/dev/null; then
+  echo "== headless Chromium (browser image)"
+  # Serve a page whose job links only appear after JavaScript runs, then probe it.
+  docker exec "$NAME" sh -c 'mkdir -p /tmp/site && cat > /tmp/site/index.html' <<'HTML'
+<!doctype html><html><body><div id="jobs"></div><script>
+document.getElementById("jobs").innerHTML = '<a href="/job/1">Smoke Test Role</a>';
+</script></body></html>
+HTML
+  docker exec -d "$NAME" python -m http.server 8765 --bind 127.0.0.1 --directory /tmp/site
+  sleep 1
+  output=$(docker exec -e ALLOW_PRIVATE_URLS=true "$NAME" \
+    jobmonitor probe http://127.0.0.1:8765/ --render browser 2>&1) || fail "probe failed: $output"
+  echo "$output" | grep -q "Smoke Test Role" || fail "Chromium did not render the page: $output"
+else
+  echo "== no browser in this image (lite build)"
+fi
 docker logs "$NAME" 2>&1 | grep -q "Migrated database from empty" || fail "no initial migration"
 in_container "
 import sqlite3

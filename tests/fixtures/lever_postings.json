@@ -1,0 +1,44 @@
+[
+  {
+    "additional": "",
+    "additionalPlain": "",
+    "categories": {
+      "commitment": "Full-time",
+      "department": "Engineering",
+      "location": "San Francisco, CA",
+      "team": "Platform",
+      "allLocations": [
+        "San Francisco, CA"
+      ]
+    },
+    "createdAt": 1758030000000,
+    "descriptionPlain": "You will run the platform that runs everything else.",
+    "description": "<div>You will run the platform that runs everything else.</div>",
+    "id": "5f2c1b9e-1111-4c8a-9d2e-000000000001",
+    "lists": [
+      {
+        "text": "Requirements",
+        "content": "<li>Go or Python</li>"
+      }
+    ],
+    "text": "Site Reliability Engineer",
+    "country": "US",
+    "workplaceType": "hybrid",
+    "hostedUrl": "https://jobs.lever.co/examplecorp/5f2c1b9e-1111-4c8a-9d2e-000000000001",
+    "applyUrl": "https://jobs.lever.co/examplecorp/5f2c1b9e-1111-4c8a-9d2e-000000000001/apply"
+  },
+  {
+    "categories": {
+      "commitment": "Contract",
+      "location": "Anywhere",
+      "team": "Data"
+    },
+    "createdAt": 1759240000000,
+    "descriptionPlain": "Contract analytics work.",
+    "id": "5f2c1b9e-2222-4c8a-9d2e-000000000002",
+    "text": "Data Analyst",
+    "workplaceType": "remote",
+    "hostedUrl": "https://jobs.lever.co/examplecorp/5f2c1b9e-2222-4c8a-9d2e-000000000002",
+    "applyUrl": "https://jobs.lever.co/examplecorp/5f2c1b9e-2222-4c8a-9d2e-000000000002/apply"
+  }
+]

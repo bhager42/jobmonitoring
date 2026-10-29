@@ -1,9 +1,13 @@
 # syntax=docker/dockerfile:1
 ARG PYTHON_VERSION=3.14
 ARG BASE_REGISTRY=docker.io/library
+# true: include Playwright + headless Chromium for JavaScript-heavy careers pages (~+300 MB).
+# false: the "-lite" image; those pages can't be read, everything else works.
+ARG WITH_BROWSER=true
 
 FROM ${BASE_REGISTRY}/python:${PYTHON_VERSION}-slim-bookworm AS build
 ARG UV_VERSION=0.13.1
+ARG WITH_BROWSER
 RUN pip install --no-cache-dir "uv==${UV_VERSION}"
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 \
@@ -11,12 +15,12 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never \
     UV_PROJECT_ENVIRONMENT=/app/.venv
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-install-project $([ "$WITH_BROWSER" = "true" ] && echo --extra browser)
 COPY app ./app
-RUN uv sync --frozen --no-dev --no-editable
+RUN uv sync --frozen --no-dev --no-editable $([ "$WITH_BROWSER" = "true" ] && echo --extra browser)
 
 FROM ${BASE_REGISTRY}/python:${PYTHON_VERSION}-slim-bookworm AS runtime
-ARG WITH_BROWSER=true
+ARG WITH_BROWSER
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -24,9 +28,11 @@ ENV PATH="/app/.venv/bin:$PATH" \
     DATA_DIR=/data \
     PORT=8080
 COPY --from=build /app/.venv /app/.venv
-# Chromium is installed only once Playwright becomes a dependency (Phase 3).
-RUN if [ "$WITH_BROWSER" = "true" ] && command -v playwright >/dev/null; then \
-      playwright install --with-deps chromium && rm -rf /var/lib/apt/lists/*; \
+# Headless shell only: the full Chromium build is not needed for headless use.
+RUN if [ "$WITH_BROWSER" = "true" ]; then \
+      playwright install --with-deps --only-shell chromium \
+      && rm -rf /var/lib/apt/lists/* \
+      && chmod -R a+rX /ms-playwright; \
     fi
 # TrueNAS SCALE's default apps user and group are 568.
 RUN groupadd -g 568 apps \

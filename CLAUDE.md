@@ -6,18 +6,19 @@ Self-hosted job-listing monitor that runs as a single Docker container on TrueNA
 - Implement one phase at a time. Lint, type checks, and tests must pass before each commit.
 
 ## Status
-- Phases 0–2 are done (scaffold; database and config; authentication and security baseline).
-  Next is Phase 3 (scraping engine).
+- Phases 0–3 are done (scaffold; database and config; authentication and security baseline;
+  scraping engine). Next is Phase 4 (matching, check runner, scheduler).
 
 ## Commands
 ```bash
-uv sync                                  # install app + dev deps into .venv
+uv sync --all-extras                     # app + browser extra + dev deps (plain `uv sync` removes Playwright)
 uv run ruff check . && uv run ruff format --check .
 uv run pyright
 uv run pytest --cov                       # fails below 85% coverage
 DATA_DIR=./data uv run jobmonitor migrate  # apply migrations (serve also does this)
 DATA_DIR=./data uv run jobmonitor serve  # run without Docker on :8080
 echo 'new password' | DATA_DIR=./data uv run jobmonitor reset-password --password-stdin
+ALLOW_PRIVATE_URLS=true uv run jobmonitor probe <url> [--render static|browser] [--item-selector ...]
 DATA_DIR=./data uv run alembic revision --autogenerate -m "describe change"  # new migration
 docker compose -f compose.dev.yaml up --build   # run the hardened container on :8080
 scripts/container-smoke-test.sh jobmonitor:dev  # what CI runs against the built image
@@ -59,6 +60,26 @@ GitHub Actions uses the defaults.
 - Colors are `light-dark()` tokens in `:root`. Use the tokens, never raw colors, so dark mode keeps working.
 - Templates get `authenticated`, `csrf_token`, and `app_version` from `app/web/templating.py`.
 
+## Scraping conventions
+- Code lives in `app/scraping/`. Adapters are in `adapters/`, and the registry
+  (`adapters/__init__.py`) sets detection order. **API adapters** (Greenhouse, Lever, Ashby,
+  SmartRecruiters, Workday) implement `detect` and `fetch`. **Page adapters** (JSON-LD, CSS selector,
+  heuristic) implement `detect` and `parse(html)`. `fetch.py` loads pages statically or in the browser.
+- **All outbound HTTP goes through `PoliteClient`** (`http.py`). Never create a bare httpx client:
+  the client is what enforces the SSRF guard, robots.txt, per-host spacing, retries and size limits.
+- **SSRF**: `validate_url` runs before every request and redirect hop. `GuardedNetworkBackend`
+  re-resolves and checks at connect time, then connects to the checked IP. In the browser, every
+  request goes through `BrowserManager._guard`.
+- Use `parse_datetime`, `get_str`, `dicts` and similar helpers from `adapters/_util.py` for JSON.
+  They keep Pyright strict happy without `ignore` comments.
+- Tests run offline: respx for HTTP, `tests/scraping_helpers.fake_resolver` for DNS, fixtures in
+  `tests/fixtures/`. **The fixtures are hand-written from the providers' documented response
+  shapes, using fictional companies.** They were not captured live (the sandbox network blocks
+  these hosts). If a live site disagrees, capture and anonymize a real response, replace the
+  fixture, and fix the adapter.
+- Browser tests use a real Chromium and skip if none can start. Locally, set `CHROMIUM_EXECUTABLE`
+  (in the cloud sandbox: `/opt/pw-browsers/chromium-*/chrome-linux64/chrome`).
+
 ## Database conventions
 - Models are in `app/db/models.py`. After changing them, autogenerate a migration, review it, and run
   `ruff format`. `tests/integration/test_migrations.py::test_models_match_migrations` fails if the
@@ -96,5 +117,20 @@ GitHub Actions uses the defaults.
   then starts a fresh one for the current browser.
 - **Setup mode re-checks the database on each request**, so a password set by
   `jobmonitor reset-password` closes `/setup` on a running app.
+- **robots.txt applies to pages, not to ATS JSON APIs.** Those are documented public APIs meant
+  for programmatic use. Missing robots.txt (4xx) allows everything. A 5xx or unreachable
+  robots.txt disallows for 1 hour (RFC 9309).
+- **No lxml.** selectolax 1.0's Lexbor parser handles all HTML. Its old `selectolax.parser`
+  module raises ImportError in 1.0, so always import from `selectolax.lexbor`.
+- **Playwright is an optional `browser` extra.** The `-lite` image (`WITH_BROWSER=false`) leaves it
+  out. The full image installs only Chromium's headless shell (`--only-shell`).
+- **Chromium always gets `--disable-dev-shm-usage`** and flags that turn off its own background
+  traffic. Without them it contacted google.com during a test run.
+- **Browser SSRF protection is best-effort.** Chromium resolves DNS itself, so the request guard
+  (pre-resolution) can't stop DNS rebinding the way the HTTP client's connect-time check does.
+  The final page URL is re-checked too.
+- **`OUTBOUND_PROXY` / `OUTBOUND_CA_BUNDLE` / `CHROMIUM_EXECUTABLE`** are advanced settings. With a
+  proxy, only the pre-flight DNS check guards private addresses.
+- **Workday `postedOn` text becomes an approximate date.** "30+ Days Ago" becomes None.
 - **Static assets get `Cache-Control: no-cache`** (ETag revalidation) until Phase 5 adds hashed
   filenames for long-lived caching. Everything else gets `no-store`.

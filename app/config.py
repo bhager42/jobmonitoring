@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     allow_private_urls: bool = False
     backup_keep: int = Field(default=7, ge=1, le=365)
 
+    # Advanced: route outbound fetches through a proxy, trusting an extra CA bundle (for TLS
+    # inspecting proxies). With a proxy, only the pre-flight DNS check guards private addresses.
+    outbound_proxy: str | None = None
+    outbound_ca_bundle: Path | None = None
+    # Advanced: use a specific Chromium binary instead of Playwright's bundled one.
+    chromium_executable: str | None = None
+
     @property
     def db_path(self) -> Path:
         return self.data_dir / DB_FILENAME

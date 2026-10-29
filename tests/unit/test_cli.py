@@ -131,3 +131,42 @@ def test_reset_password_prompts_and_validates(
             main(["reset-password"])
     finally:
         get_settings.cache_clear()
+
+
+def test_probe_prints_detected_postings(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import respx
+
+    from app.cli import main
+    from app.config import get_settings
+    from tests.scraping_helpers import fixture_json
+
+    monkeypatch.setenv("ALLOW_PRIVATE_URLS", "true")  # skip real DNS lookups in this test
+    get_settings.cache_clear()
+    try:
+        with respx.mock() as mock:
+            mock.get(url__startswith="https://boards-api.greenhouse.io/").respond(
+                200, json=fixture_json("greenhouse_jobs.json")
+            )
+            main(["probe", "https://boards.greenhouse.io/examplecorp", "--limit", "1"])
+    finally:
+        get_settings.cache_clear()
+    out = capsys.readouterr().out
+    assert 'Adapter:   greenhouse {"token": "examplecorp"}' in out
+    assert "Postings:  2" in out
+    assert "1. Senior Backend Engineer (Python)  [Remote - US · Engineering · remote" in out
+    assert "... and 1 more" in out
+
+
+def test_probe_reports_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.cli import main
+    from app.config import get_settings
+
+    monkeypatch.delenv("ALLOW_PRIVATE_URLS", raising=False)
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(SystemExit, match="non-public"):
+            main(["probe", "http://127.0.0.1/jobs", "--render", "static"])
+    finally:
+        get_settings.cache_clear()

@@ -1,0 +1,109 @@
+{
+  "offset": 0,
+  "limit": 2,
+  "totalFound": 3,
+  "content": [
+    {
+      "id": "7440000900001",
+      "name": "Senior Accountant",
+      "uuid": "00000000-0000-0000-0000-000000000001",
+      "refNumber": "REF1",
+      "company": {
+        "identifier": "ExampleCorp",
+        "name": "Example Corp"
+      },
+      "releasedDate": "2026-10-05T14:23:11.000Z",
+      "location": {
+        "city": "Denver",
+        "region": "CO",
+        "country": "us",
+        "remote": false,
+        "latitude": "39.7",
+        "longitude": "-104.9",
+        "fullLocation": "Denver, CO, United States"
+      },
+      "industry": {
+        "id": "financial_services",
+        "label": "Financial Services"
+      },
+      "department": {
+        "id": "1",
+        "label": "Finance"
+      },
+      "function": {
+        "id": "accounting",
+        "label": "Accounting"
+      },
+      "typeOfEmployment": {
+        "id": "permanent",
+        "label": "Full-time"
+      },
+      "experienceLevel": {
+        "id": "mid_senior_level",
+        "label": "Mid-Senior Level"
+      },
+      "customField": [],
+      "visibility": "PUBLIC",
+      "ref": "https://api.smartrecruiters.com/v1/companies/ExampleCorp/postings/7440000900001",
+      "creator": {
+        "name": "Recruiter"
+      },
+      "language": {
+        "code": "en",
+        "label": "English",
+        "labelNative": "English (US)"
+      }
+    },
+    {
+      "id": "7440000900002",
+      "name": "Payroll Specialist",
+      "uuid": "00000000-0000-0000-0000-000000000002",
+      "refNumber": "REF2",
+      "company": {
+        "identifier": "ExampleCorp",
+        "name": "Example Corp"
+      },
+      "releasedDate": "2026-10-05T14:23:11.000Z",
+      "location": {
+        "city": "Boulder",
+        "region": "CO",
+        "country": "us",
+        "remote": true,
+        "latitude": "39.7",
+        "longitude": "-104.9",
+        "fullLocation": "Boulder, CO, United States"
+      },
+      "industry": {
+        "id": "financial_services",
+        "label": "Financial Services"
+      },
+      "department": {
+        "id": "1",
+        "label": "Finance"
+      },
+      "function": {
+        "id": "accounting",
+        "label": "Accounting"
+      },
+      "typeOfEmployment": {
+        "id": "permanent",
+        "label": "Full-time"
+      },
+      "experienceLevel": {
+        "id": "mid_senior_level",
+        "label": "Mid-Senior Level"
+      },
+      "customField": [],
+      "visibility": "PUBLIC",
+      "ref": "https://api.smartrecruiters.com/v1/companies/ExampleCorp/postings/7440000900002",
+      "creator": {
+        "name": "Recruiter"
+      },
+      "language": {
+        "code": "en",
+        "label": "English",
+        "labelNative": "English (US)"
+      }
+    }
+  ]
+}
