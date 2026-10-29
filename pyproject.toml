@@ -52,10 +52,12 @@ path = "app/__init__.py"
 packages = ["app"]
 
 [tool.uv]
-# Only resolve releases that are at least two weeks old. Move this date forward when updating dependencies.
-exclude-newer = "2026-10-15T00:00:00Z"
+# Only resolve releases that are at least two weeks old. A rolling window (stored as a span in
+# uv.lock, so `--locked` stays valid as time passes); Dependabot's cooldown is one day longer, so
+# every version it proposes is already inside this window.
+exclude-newer = "14 days"
 # Security exceptions to the two-week rule. Each entry names the advisory; remove the entry once
-# exclude-newer above moves past its date.
+# it is more than 14 days old (the rolling window then covers it).
 #   certifi: GHSA-6q48-6c7w-9gw2 (compromised emSign intermediate CAs), fixed in 2026.10.18.
 exclude-newer-package = { certifi = "2026-10-21T00:00:00Z" }
 

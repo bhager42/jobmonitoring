@@ -29,8 +29,10 @@ scripts/truenas-acceptance.sh jobmonitor:dev     # docs/truenas-app.yaml via Com
 E2E_IMAGE=jobmonitor:dev uv run pytest tests/e2e # the browser journey against an image
 ```
 
-`[tool.uv] exclude-newer` in `pyproject.toml` keeps every resolved package at least two weeks old.
-Move that date forward (and re-run `uv lock`) when updating dependencies.
+`[tool.uv] exclude-newer = "14 days"` in `pyproject.toml` keeps every resolved package at least two
+weeks old. The window rolls, and `uv.lock` stores the span, so `--locked` doesn't go stale.
+Dependabot's cooldown is 15 days so its proposals always fit the window. (A fixed date used to make
+every Dependabot `uv` update fail.)
 
 ## Releasing
 - CI (`.github/workflows/ci.yml`) runs on every push, every PR, daily, and when called by the
@@ -51,7 +53,7 @@ Move that date forward (and re-run `uv lock`) when updating dependencies.
   (high or critical, fixable). CI also runs daily, so a new advisory fails the build without a code change.
 - **Security fixes skip the two-week rule.** Add the package to `exclude-newer-package` in
   `pyproject.toml` with a comment naming the advisory. Then run
-  `uv lock --upgrade-package <name>` and `uv sync`. Remove the entry once `exclude-newer` passes its date.
+  `uv lock --upgrade-package <name>` and `uv sync`. Remove the entry once it is over 14 days old.
 - Dependabot's 14-day cooldown applies to version updates only; security updates are not delayed.
   They need Dependabot alerts and security updates turned on in the repository settings.
 - To audit locally: `uv export --locked --all-groups --no-emit-project --no-hashes -o /tmp/req.txt`,
