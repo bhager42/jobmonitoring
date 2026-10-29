@@ -1,0 +1,36 @@
+# Job Monitor for TrueNAS SCALE 25.10: Apps > Discover Apps > (three-dot menu) > Install via YAML.
+# Before installing, change the two lines marked CHANGE. See the README for step-by-step help.
+services:
+  jobmonitor:
+    # ":1" follows the newest 1.x release. Use ":1-lite" for a smaller image without the
+    # browser (careers pages that need JavaScript won't work).
+    image: ghcr.io/bhager42/jobmonitoring:1
+    restart: unless-stopped
+    init: true
+    user: "568:568"                         # TrueNAS's "apps" user and group
+    ports:
+      - "30880:8080"                        # host:container. Change 30880 if it's taken.
+    environment:
+      TZ: "America/Denver"                  # CHANGE to your time zone
+      SECURE_COOKIES: "false"               # "true" only behind an HTTPS reverse proxy
+      TRUST_PROXY: "false"                  # "true" only behind a reverse proxy
+      # APP_PASSWORD: "at least 12 characters"   # optional; otherwise use the setup token in the logs
+    volumes:
+      - /mnt/tank/apps/jobmonitor:/data     # CHANGE "tank" to your pool's name
+    shm_size: "512m"                        # room for the headless browser
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

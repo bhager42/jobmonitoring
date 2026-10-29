@@ -6,9 +6,10 @@ Self-hosted job-listing monitor that runs as a single Docker container on TrueNA
 - Implement one phase at a time. Lint, type checks, and tests must pass before each commit.
 
 ## Status
-- Phases 0–6 are done (scaffold; database and config; authentication and security baseline;
-  scraping engine; matching, check runner and scheduler; web UI; notifications).
-  Next is Phase 7 (packaging and release).
+- Phases 0–7 are implemented, and the version is 1.0.0. Two parts of Phase 7's "done" condition
+  need a person: running the §11 acceptance test on a real TrueNAS 25.10 system, and pushing the
+  `v1.0.0` tag (which publishes the images). `scripts/truenas-acceptance.sh` runs the same checks
+  with Docker Compose and runs in CI.
 
 ## Commands
 ```bash
@@ -24,10 +25,26 @@ ALLOW_PRIVATE_URLS=true uv run jobmonitor probe <url> [--render static|browser] 
 DATA_DIR=./data uv run alembic revision --autogenerate -m "describe change"  # new migration
 docker compose -f compose.dev.yaml up --build   # run the hardened container on :8080
 scripts/container-smoke-test.sh jobmonitor:dev  # what CI runs against the built image
+scripts/truenas-acceptance.sh jobmonitor:dev     # docs/truenas-app.yaml via Compose: plan §11 checks
+E2E_IMAGE=jobmonitor:dev uv run pytest tests/e2e # the browser journey against an image
 ```
 
 `[tool.uv] exclude-newer` in `pyproject.toml` keeps every resolved package at least two weeks old.
 Move that date forward (and re-run `uv lock`) when updating dependencies.
+
+## Releasing
+- CI (`.github/workflows/ci.yml`) runs on every push, every PR, daily, and when called by the
+  release workflow. For both image variants (full and `-lite`) it runs the smoke test, the TrueNAS
+  acceptance script, the browser journey against the image, and Grype.
+- `release.yml` runs only for tags `vX.Y.Z`. It calls CI, then publishes
+  `ghcr.io/bhager42/jobmonitoring` with tags `X.Y.Z`, `X.Y`, `X` and `latest` (plus `-lite`
+  versions), along with an SBOM and provenance. Pre-release tags (`v1.2.0-rc.1`) get only their exact
+  version. Branch pushes never publish.
+- To release: bump `app/__init__.py`, date the `CHANGELOG.md` entry, merge, then
+  `git tag vX.Y.Z && git push origin vX.Y.Z`. The first time, make the GHCR package public.
+- `docs/truenas-app.yaml` is user-facing. Keep it in sync with the README install steps, and keep the
+  `image:`, data path and `"30880:8080"` lines exactly as `scripts/truenas-acceptance.sh` expects
+  (it substitutes them).
 
 ## Vulnerability handling
 - CI audits every locked Python package with pip-audit (OSV) and scans the built image with Grype
@@ -221,7 +238,15 @@ GitHub Actions uses the defaults.
   ntfy, Gotify, Home Assistant) are a normal use. Only careers-page fetching is guarded.
 - **Failed notifications are not retried.** The matches stay in the UI, and the failure is shown
   on the Settings page.
-- **E2E runs against `jobmonitor serve` in a subprocess**, not the Docker image (plan §13). The
-  container smoke test covers the image separately.
+- **E2E runs against `jobmonitor serve` by default; with `E2E_IMAGE` it runs against an image**
+  (CI does this for both variants, with `--network host` so the container can reach the test site).
+- **Host port 30880, not 8686** (plan §11). 8686 is Lidarr's default, a common TrueNAS app.
+- **The TrueNAS YAML uses `:1`**, so it follows 1.x releases and never jumps to a breaking 2.x.
+- **Images are published only from version tags.** The plan had `:latest` from every push to main,
+  but this repo has no `main`, and an untested branch push shouldn't reach users' NAS boxes.
+- **CI runs on pushes to every branch.** Before, it only ran on `main` (which doesn't exist) and on
+  PRs, so it had never run.
+- **No license has been chosen.** Phase 0's `pyproject.toml` said MIT without the owner deciding,
+  so that was removed. Add a `LICENSE` file once the owner picks one.
 - **Static assets get `Cache-Control: no-cache`** (ETag revalidation) until Phase 5 adds hashed
   filenames for long-lived caching. Everything else gets `no-store`.

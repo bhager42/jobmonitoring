@@ -4,7 +4,6 @@ dynamic = ["version"]
 description = "Self-hosted job listing monitor for TrueNAS SCALE"
 readme = "README.md"
 requires-python = ">=3.13"
-license = "MIT"
 dependencies = [
     "fastapi",
     "uvicorn[standard]",
@@ -70,6 +69,8 @@ select = ["E", "W", "F", "I", "B", "UP", "S", "SIM", "RUF", "ASYNC", "PTH", "DTZ
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S310", "S311"]
+# The E2E harness drives `docker`; "/tmp" there is the container's tmpfs mount.
+"tests/e2e/**" = ["S101", "S105", "S106", "S108", "S310", "S311", "S603", "S607"]
 "app/db/migrations/versions/**" = ["E501"]
 
 [tool.pyright]

@@ -9,7 +9,7 @@ import sys
 import threading
 import time
 import urllib.request
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -116,25 +116,59 @@ def webhook() -> Iterator[Webhook]:
 @dataclass
 class AppServer:
     url: str
-    log: Path
+    read_log: Callable[[], str]
 
     def setup_token(self) -> str:
-        match = re.search(r"Setup token: (\S+)", self.log.read_text())
+        match = re.search(r"Setup token: (\S+)", self.read_log())
         assert match, "no setup token in the app log"
         return match.group(1)
 
 
+def wait_for_health(url: str, read_log: Callable[[], str]) -> None:
+    for _ in range(300):
+        try:
+            with urllib.request.urlopen(f"{url}/healthz", timeout=1):
+                return
+        except OSError:
+            time.sleep(0.1)
+    pytest.fail("app did not start:\n" + read_log())
+
+
 @pytest.fixture
 def app_server(tmp_path: Path) -> Iterator[AppServer]:
+    """The app under test: `jobmonitor serve` in a subprocess, or a built image when E2E_IMAGE
+    is set (CI runs the journey against the exact image it is about to publish)."""
     port = free_port()
-    log = tmp_path / "app.log"
-    env = {
-        **os.environ,
-        "DATA_DIR": str(tmp_path / "data"),
+    url = f"http://127.0.0.1:{port}"
+    settings = {
         "PORT": str(port),
-        "ALLOW_PRIVATE_URLS": "true",  # the fake careers site is on 127.0.0.1
+        "ALLOW_PRIVATE_URLS": "true",  # the fake careers site and webhook are on 127.0.0.1
         "LOG_LEVEL": "info",
     }
+    if image := os.environ.get("E2E_IMAGE"):
+        name = f"jm-e2e-{port}"
+        env_args = [arg for key, value in settings.items() for arg in ("-e", f"{key}={value}")]
+        subprocess.run(
+            ["docker", "run", "-d", "--name", name, "--network", "host", "--init", "--read-only",
+             "--tmpfs", "/tmp", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true",
+             "--shm-size", "512m", *env_args, image],
+            check=True,
+            capture_output=True,
+        )  # fmt: skip
+
+        def read_docker_log() -> str:
+            result = subprocess.run(["docker", "logs", name], capture_output=True, text=True)
+            return result.stdout + result.stderr
+
+        try:
+            wait_for_health(url, read_docker_log)
+            yield AppServer(url, read_docker_log)
+        finally:
+            subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+        return
+
+    log = tmp_path / "app.log"
+    env = {**os.environ, **settings, "DATA_DIR": str(tmp_path / "data")}
     env.pop("APP_PASSWORD", None)
     with log.open("w") as out:
         process = subprocess.Popen(
@@ -144,17 +178,9 @@ def app_server(tmp_path: Path) -> Iterator[AppServer]:
             stderr=subprocess.STDOUT,
             cwd=Path(__file__).resolve().parents[2],
         )
-    url = f"http://127.0.0.1:{port}"
     try:
-        for _ in range(100):
-            try:
-                with urllib.request.urlopen(f"{url}/healthz", timeout=1):
-                    break
-            except OSError:
-                time.sleep(0.1)
-        else:
-            pytest.fail("app did not start:\n" + log.read_text())
-        yield AppServer(url, log)
+        wait_for_health(url, log.read_text)
+        yield AppServer(url, log.read_text)
     finally:
         process.terminate()
         process.wait(timeout=15)
