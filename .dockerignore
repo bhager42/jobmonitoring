@@ -1,0 +1,6 @@
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!app/
+**/__pycache__

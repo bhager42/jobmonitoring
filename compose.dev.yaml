@@ -1,0 +1,26 @@
+# Local development. Builds the image and runs it with the same hardening as the TrueNAS app.
+services:
+  jobmonitor:
+    build:
+      context: .
+      args:
+        WITH_BROWSER: "false"
+    image: jobmonitor:dev
+    init: true
+    user: "568:568"
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: UTC
+      LOG_LEVEL: debug
+    volumes:
+      - jobmonitor-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  jobmonitor-data:
