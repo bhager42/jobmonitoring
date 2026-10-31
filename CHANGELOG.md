@@ -3,6 +3,15 @@
 All notable changes to Job Monitor. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] - 2026-10-31
+
+### Changed
+- The TrueNAS install file (`docs/truenas-app.yaml`) now uses the `:latest` image tag, so it follows
+  every release. To stay on 1.x, use `:1` instead; the file and the README explain both, and the
+  smaller `:latest-lite` / `:1-lite` images.
+
+No changes to the app itself.
+
 ## [1.0.0] - 2026-10-31
 
 First release, licensed under the GNU Affero General Public License v3.0 or later.
@@ -34,4 +43,5 @@ First release, licensed under the GNU Affero General Public License v3.0 or late
 - **Images** `ghcr.io/bhager42/jobmonitoring` (with browser) and `-lite` (without), for linux/amd64.
 - `jobmonitor` command: `serve`, `migrate`, `reset-password`, `probe <url>`.
 
+[1.0.1]: https://github.com/bhager42/jobmonitoring/releases/tag/v1.0.1
 [1.0.0]: https://github.com/bhager42/jobmonitoring/releases/tag/v1.0.0
