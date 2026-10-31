@@ -64,7 +64,7 @@ docker logs "$NAME" 2>&1 | grep -q "Setup token: " || fail "setup token not logg
 if docker exec "$NAME" python -c "import playwright" 2>/dev/null; then
   echo "== headless Chromium (browser image)"
   # Serve a page whose job links only appear after JavaScript runs, then probe it.
-  docker exec "$NAME" sh -c 'mkdir -p /tmp/site && cat > /tmp/site/index.html' <<'HTML'
+  docker exec -i "$NAME" sh -c 'mkdir -p /tmp/site && cat > /tmp/site/index.html' <<'HTML'
 <!doctype html><html><body><div id="jobs"></div><script>
 document.getElementById("jobs").innerHTML = '<a href="/job/1">Smoke Test Role</a>';
 </script></body></html>
