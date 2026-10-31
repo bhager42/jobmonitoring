@@ -59,7 +59,9 @@ for path in ('/setup', '/static/css/app.css'):
         assert response.status == 200, path
         assert response.headers['Content-Security-Policy'], path
 " || fail "templates or static files are missing from the image"
-docker logs "$NAME" 2>&1 | grep -q "Setup token: " || fail "setup token not logged"
+# Not `grep -q`: it exits at the first match, the log command then dies of SIGPIPE, and
+# `set -o pipefail` turns that into a failure even though the line was found.
+docker logs "$NAME" 2>&1 | grep "Setup token: " >/dev/null || fail "setup token not logged"
 
 if docker exec "$NAME" python -c "import playwright" 2>/dev/null; then
   echo "== headless Chromium (browser image)"
@@ -73,11 +75,11 @@ HTML
   sleep 1
   output=$(docker exec -e ALLOW_PRIVATE_URLS=true "$NAME" \
     jobmonitor probe http://127.0.0.1:8765/ --render browser 2>&1) || fail "probe failed: $output"
-  echo "$output" | grep -q "Smoke Test Role" || fail "Chromium did not render the page: $output"
+  echo "$output" | grep "Smoke Test Role" >/dev/null || fail "Chromium did not render the page: $output"
 else
   echo "== no browser in this image (lite build)"
 fi
-docker logs "$NAME" 2>&1 | grep -q "Migrated database from empty" || fail "no initial migration"
+docker logs "$NAME" 2>&1 | grep "Migrated database from empty" >/dev/null || fail "no initial migration"
 in_container "
 import sqlite3
 conn = sqlite3.connect('/data/jobmonitor.db')
@@ -92,7 +94,7 @@ row = sqlite3.connect('/data/jobmonitor.db').execute(
     \"SELECT value FROM settings WHERE key = 'smoke_test'\").fetchone()
 assert row == ('persisted',), row
 " || fail "data did not survive $1"
-  docker logs "$NAME" 2>&1 | tail -n 20 | grep -q "Database is up to date" \
+  docker logs "$NAME" 2>&1 | tail -n 20 | grep "Database is up to date" >/dev/null \
     || fail "database was not reported up to date after $1"
   # Daily backups are expected; a pre-migration backup would mean the schema was migrated again.
   if docker exec "$NAME" sh -c 'ls /data/backups 2>/dev/null | grep -q "^pre-migrate-"'; then

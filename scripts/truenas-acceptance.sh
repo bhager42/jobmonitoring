@@ -68,7 +68,9 @@ wait_healthy
 [ "$(http_status /healthz)" = 200 ] || fail "/healthz did not answer on port $PORT"
 [ "$(http_status /)" = 303 ] || fail "/ should redirect to /setup on a new install"
 [ "$(http_status /setup)" = 200 ] || fail "the setup page did not load"
-compose logs | grep -q "Setup token: " || fail "no setup token in the app logs"
+# Not `grep -q`: it exits at the first match, the log command then dies of SIGPIPE, and
+# `set -o pipefail` turns that into a failure even though the line was found.
+compose logs | grep "Setup token: " >/dev/null || fail "no setup token in the app logs"
 [ -f "$DATA/jobmonitor.db" ] || fail "jobmonitor.db was not created in the dataset"
 [ "$(stat -c %u:%g "$DATA/jobmonitor.db")" = 568:568 ] || fail "database not owned by 568:568"
 
@@ -86,7 +88,7 @@ import sqlite3, sys
 row = sqlite3.connect(sys.argv[1]).execute(\"SELECT value FROM settings WHERE key='acceptance'\").fetchone()
 sys.exit(0 if row == ('kept',) else 1)
 " "$DATA/jobmonitor.db" || fail "data lost after $1"
-  compose logs --since 2m | grep -q "Database is up to date" || fail "no clean start after $1"
+  compose logs --since 2m | grep "Database is up to date" >/dev/null || fail "no clean start after $1"
 }
 
 echo "== stop / start"
