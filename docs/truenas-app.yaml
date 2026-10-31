@@ -2,9 +2,10 @@
 # Before installing, change the two lines marked CHANGE. See the README for step-by-step help.
 services:
   jobmonitor:
-    # ":1" follows the newest 1.x release. Use ":1-lite" for a smaller image without the
-    # browser (careers pages that need JavaScript won't work).
-    image: ghcr.io/bhager42/jobmonitoring:1
+    # ":latest" follows the newest release, including future major versions. Use ":1" to stay
+    # on 1.x, or ":latest-lite" / ":1-lite" for a smaller image without the browser (careers
+    # pages that need JavaScript won't work).
+    image: ghcr.io/bhager42/jobmonitoring:latest
     restart: unless-stopped
     init: true
     user: "568:568"                         # TrueNAS's "apps" user and group

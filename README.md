@@ -51,9 +51,10 @@ Note the dataset's path, for example `/mnt/tank/apps/jobmonitor`.
 
 The app listens on port **30880**: open `http://<your-truenas-address>:30880`.
 
-The file uses image tag `:1`, which follows the newest 1.x release. There's also a smaller
-`:1-lite` image without the headless browser. It works for most sites, but can't read careers pages
-that only show jobs after running JavaScript.
+The file uses image tag `:latest`, which follows the newest release, including future major
+versions (which may bring breaking changes). To stay on 1.x, use `:1` instead. There are also smaller
+`-lite` images (`:latest-lite`, `:1-lite`) without the headless browser. They work for most sites,
+but can't read careers pages that only show jobs after running JavaScript.
 
 ## First sign-in
 
@@ -116,8 +117,8 @@ folder, kept separate from the database.
 ## Updating
 
 Releases are published as `ghcr.io/bhager42/jobmonitoring` with tags `1.2.3`, `1.2`, `1` and `latest`
-(and `-lite` versions of each). With the `:1` tag from the YAML, update from **Apps > jobmonitor >
-Update** (or **Edit > Save** to pull the newest 1.x image).
+(and `-lite` versions of each). With the `:latest` tag from the YAML, update from **Apps >
+jobmonitor > Update** (or **Edit > Save** to pull the newest image).
 
 On start, the app updates its database automatically. Before changing an existing database it saves a
 copy to `backups/pre-migrate-<time>.db` in the data folder. If you ever start an older image on a

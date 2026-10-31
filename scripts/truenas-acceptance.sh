@@ -32,7 +32,7 @@ fail() {
 mkdir -p "$DATA"
 as_root chown 568:568 "$DATA"     # what the dataset's "apps" permission gives you on TrueNAS
 
-sed -e "s#image: ghcr.io/bhager42/jobmonitoring:1#image: $IMAGE#" \
+sed -e "s#image: ghcr.io/bhager42/jobmonitoring:latest#image: $IMAGE#" \
     -e "s#/mnt/tank/apps/jobmonitor:/data#$DATA:/data#" \
     -e "s#\"30880:8080\"#\"$PORT:8080\"#" \
     "$ROOT/docs/truenas-app.yaml" > "$COMPOSE"

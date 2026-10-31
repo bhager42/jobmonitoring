@@ -252,7 +252,9 @@ GitHub Actions uses the defaults.
 - **E2E runs against `jobmonitor serve` by default; with `E2E_IMAGE` it runs against an image**
   (CI does this for both variants, with `--network host` so the container can reach the test site).
 - **Host port 30880, not 8686** (plan §11). 8686 is Lidarr's default, a common TrueNAS app.
-- **The TrueNAS YAML uses `:1`**, so it follows 1.x releases and never jumps to a breaking 2.x.
+- **The TrueNAS YAML uses `:latest`** (owner's choice), so it follows every release, including a
+  future 2.x. The comment and README point to `:1` for anyone who wants to stay on 1.x.
+  `scripts/truenas-acceptance.sh` substitutes the `image: ...:latest` line.
 - **Images are published only from version tags.** The plan had `:latest` from every push to main,
   but this repo has no `main`, and an untested branch push shouldn't reach users' NAS boxes.
 - **CI runs on pushes to every branch.** Before, it only ran on `main` (which doesn't exist) and on
