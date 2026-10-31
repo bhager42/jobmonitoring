@@ -3,7 +3,7 @@
 All notable changes to Job Monitor. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.0.0] - 2026-10-29
+## [1.0.0] - 2026-10-31
 
 First release, licensed under the GNU Affero General Public License v3.0 or later.
 
