@@ -91,3 +91,15 @@ def test_every_route_requires_login_unless_public(client: TestClient) -> None:
             assert response.status_code in (303, 401), (method, route.path)
             checked += 1
     assert checked >= 5
+
+
+def test_every_page_offers_the_source_code(client: TestClient, setup_client: TestClient) -> None:
+    """AGPL-3.0 section 13: network users must be offered the corresponding source."""
+    from app import SOURCE_URL
+
+    pages = [setup_client.get("/setup").text, client.get("/login").text]
+    login(client)
+    pages += [client.get(path).text for path in ("/", "/monitors", "/matches", "/settings")]
+    for html in pages:
+        assert f'<a href="{SOURCE_URL}"' in html
+        assert "AGPL-3.0" in html

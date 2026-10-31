@@ -248,7 +248,10 @@ GitHub Actions uses the defaults.
   but this repo has no `main`, and an untested branch push shouldn't reach users' NAS boxes.
 - **CI runs on pushes to every branch.** Before, it only ran on `main` (which doesn't exist) and on
   PRs, so it had never run.
-- **No license has been chosen.** Phase 0's `pyproject.toml` said MIT without the owner deciding,
-  so that was removed. Add a `LICENSE` file once the owner picks one.
+- **License: AGPL-3.0-or-later** (owner's choice). `LICENSE` is the canonical GNU text, unmodified.
+  Section 13 (network use) is met by the footer link to `app.SOURCE_URL` on every page, and
+  `test_every_page_offers_the_source_code` guards it. Image labels carry the license too. New
+  dependencies must be GPL-compatible (permissive licenses are fine; avoid GPL-2.0-only).
+  `regex` is "Apache-2.0 AND CNRI-Python"; it's widely used in GPL projects, but it's flagged here.
 - **Static assets get `Cache-Control: no-cache`** (ETag revalidation) until Phase 5 adds hashed
   filenames for long-lived caching. Everything else gets `no-store`.

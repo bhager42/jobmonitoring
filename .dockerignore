@@ -2,5 +2,6 @@
 !pyproject.toml
 !uv.lock
 !README.md
+!LICENSE
 !app/
 **/__pycache__

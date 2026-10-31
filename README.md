@@ -216,6 +216,24 @@ doubles with each further failure, up to a week. It returns to normal after the 
 **Notifications don't arrive.** Use **Send test** in Settings, then look at the app log for the error.
 The Settings page also shows the last failure.
 
+## License
+
+Copyright (C) 2026 bhager42
+
+Job Monitor is free software: you can redistribute it and/or modify it under the terms of the
+[GNU Affero General Public License](LICENSE) as published by the Free Software Foundation, either
+version 3 of the License, or (at your option) any later version. It is distributed in the hope that
+it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See the license for details.
+
+The AGPL also covers network use: if you let other people use a **modified** version over a network,
+you must offer them its source code. Every page links to the source in its footer; set
+`SOURCE_URL` in `app/__init__.py` to your own copy if you change the code.
+
+Third-party parts keep their own licenses: htmx (0BSD) is included in the app, and axe-core
+(MPL-2.0) is used only by the tests. Python dependencies are permissively licensed (MIT, BSD,
+Apache-2.0 and similar).
+
 ## Development
 
 See [`CLAUDE.md`](CLAUDE.md) for commands and conventions, [`docs/DEVELOPMENT_PLAN.md`](docs/DEVELOPMENT_PLAN.md)

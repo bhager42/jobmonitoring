@@ -14,13 +14,15 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never \
     UV_PROJECT_ENVIRONMENT=/app/.venv
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock README.md LICENSE ./
 RUN uv sync --frozen --no-dev --no-install-project $([ "$WITH_BROWSER" = "true" ] && echo --extra browser)
 COPY app ./app
 RUN uv sync --frozen --no-dev --no-editable $([ "$WITH_BROWSER" = "true" ] && echo --extra browser)
 
 FROM ${BASE_REGISTRY}/python:${PYTHON_VERSION}-slim-bookworm AS runtime
 ARG WITH_BROWSER
+LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later" \
+      org.opencontainers.image.source="https://github.com/bhager42/jobmonitoring"
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

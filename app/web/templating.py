@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
-from app import __version__
+from app import SOURCE_URL, __version__
 from app.db.models import utcnow
 from app.web.assets import static_url
 
@@ -56,6 +56,7 @@ def _auth_context(request: Request) -> dict[str, Any]:
         "authenticated": auth is not None,
         "csrf_token": auth.csrf_token if auth is not None else "",
         "app_version": __version__,
+        "source_url": SOURCE_URL,
         "current_path": request.url.path,
     }
 

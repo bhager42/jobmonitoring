@@ -4,6 +4,8 @@ dynamic = ["version"]
 description = "Self-hosted job listing monitor for TrueNAS SCALE"
 readme = "README.md"
 requires-python = ">=3.13"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
 dependencies = [
     "fastapi",
     "uvicorn[standard]",

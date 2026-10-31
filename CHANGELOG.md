@@ -5,7 +5,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [1.0.0] - 2026-10-29
 
-First release.
+First release, licensed under the GNU Affero General Public License v3.0 or later.
 
 ### Added
 - **Monitors** for company careers pages. Greenhouse, Lever, Ashby, SmartRecruiters and Workday
