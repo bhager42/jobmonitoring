@@ -1,7 +1,10 @@
 """User-supplied CSS selectors, for pages no other adapter understands."""
 
+from urllib.parse import urljoin
+
 from selectolax.lexbor import LexborHTMLParser, LexborNode, SelectolaxError
 
+from app.scraping.adapters._util import document_base
 from app.scraping.base import AdapterConfig, FetchError, RawPosting, clean_text, looks_remote
 
 NAME = "css_selector"
@@ -31,8 +34,10 @@ class CssSelectorAdapter:
         item_selector = cfg.params.get("item_selector")
         if not item_selector:
             raise FetchError("CSS selector monitors need an item selector")
+        tree = LexborHTMLParser(html)
+        link_base = document_base(tree, base_url)
         try:
-            items = LexborHTMLParser(html).css(item_selector)
+            items = tree.css(item_selector)
         except SelectolaxError as exc:
             raise FetchError(f"invalid CSS selector {item_selector!r}: {exc}") from exc
 
@@ -48,6 +53,11 @@ class CssSelectorAdapter:
                 continue
             location = _text(_first(item, cfg.params.get("location_selector")))
             postings.append(
-                RawPosting(title=title, url=href, location=location, remote=looks_remote(location))
+                RawPosting(
+                    title=title,
+                    url=urljoin(link_base, href.strip()),
+                    location=location,
+                    remote=looks_remote(location),
+                )
             )
         return postings

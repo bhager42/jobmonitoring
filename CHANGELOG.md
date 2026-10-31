@@ -3,6 +3,22 @@
 All notable changes to Job Monitor. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] - 2026-10-31
+
+### Fixed
+- **"Find jobs" listed menu and footer links as postings** on big-company careers sites such as
+  Google's ("Jobs", "How we hire", "Sign in", policy links). The link finder now ignores site
+  menus, headers and footers, and only accepts links whose address identifies one job (an ID, or
+  a job title after `/jobs/`). Icon-font names ("work_outline") and repeated labels no longer end
+  up in titles.
+- **Job cards whose link just says "Learn more"** now get the job's title from the link's label or
+  the card's heading, instead of being skipped.
+- **Pages with a `<base href>`** had their relative job links resolved to the wrong address.
+
+### Changed
+- When a page lists no jobs but links to a list ("View all jobs"), the message suggests that
+  address.
+
 ## [1.0.1] - 2026-10-31
 
 ### Fixed

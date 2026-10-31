@@ -98,6 +98,17 @@ async def test_heuristic_fallback(mock: respx.MockRouter, client: PoliteClient) 
     assert len(outcome.postings) == 4
 
 
+async def test_nothing_found_suggests_the_job_list(
+    mock: respx.MockRouter, client: PoliteClient
+) -> None:
+    mock.get(f"{SITE}/about/careers/").respond(200, html=fixture_text("heuristic_landing.html"))
+    with pytest.raises(
+        NothingFoundError,
+        match=r"list of jobs at https://careers\.example\.com/about/careers/applications/jobs/results/",
+    ):
+        await detect(f"{SITE}/about/careers/", make_ctx(client, render_mode="static"))
+
+
 async def test_css_selectors_take_priority(mock: respx.MockRouter, client: PoliteClient) -> None:
     mock.get("https://shop.example.com/jobs").respond(200, html=fixture_text("css_page.html"))
     outcome = await detect(

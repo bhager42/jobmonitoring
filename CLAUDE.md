@@ -98,6 +98,10 @@ GitHub Actions uses the defaults.
 - **SSRF**: `validate_url` runs before every request and redirect hop. `GuardedNetworkBackend`
   re-resolves and checks at connect time, then connects to the checked IP. In the browser, every
   request goes through `BrowserManager._guard`.
+- The heuristic adapter (last resort) accepts a link only if `looks_like_posting(url)` (a job word
+  in the path followed by an ID, or a multi-word slug after `/jobs/` and similar) and it isn't inside
+  `<nav>`/`<header>`/`<footer>`. "Learn more" links take the aria-label or the card's one heading.
+  Resolve relative links with `_util.document_base` so `<base href>` is honoured.
 - Use `parse_datetime`, `get_str`, `dicts` and similar helpers from `adapters/_util.py` for JSON.
   They keep Pyright strict happy without `ignore` comments.
 - Tests run offline: respx for HTTP, `tests/scraping_helpers.fake_resolver` for DNS, fixtures in

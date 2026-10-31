@@ -4,7 +4,7 @@ import html as html_lib
 import re
 from datetime import UTC, datetime
 from typing import Any, cast
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 from selectolax.lexbor import LexborHTMLParser
 
@@ -89,3 +89,11 @@ def humanize(value: str | None) -> str | None:
         return None
     spaced = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", value).replace("_", " ").replace("-", " ")
     return spaced.strip().lower().capitalize()
+
+
+def document_base(tree: LexborHTMLParser, page_url: str) -> str:
+    """Relative links resolve against <base href> when the page has one."""
+    node = tree.css_first("base[href]")
+    href = (node.attributes.get("href") or "").strip() if node else ""
+    base = urljoin(page_url, href) if href else page_url
+    return base if base.startswith(("http://", "https://")) else page_url

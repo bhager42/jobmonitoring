@@ -12,7 +12,7 @@ from app.db.models import utcnow
 from app.scraping.adapters.ashby import AshbyAdapter
 from app.scraping.adapters.css_selector import CssSelectorAdapter
 from app.scraping.adapters.greenhouse import GreenhouseAdapter
-from app.scraping.adapters.heuristic import HeuristicAdapter
+from app.scraping.adapters.heuristic import HeuristicAdapter, job_list_link, looks_like_posting
 from app.scraping.adapters.jsonld import JsonLdAdapter
 from app.scraping.adapters.lever import LeverAdapter
 from app.scraping.adapters.smartrecruiters import SmartRecruitersAdapter
@@ -356,7 +356,7 @@ def test_css_selector_extracts_items() -> None:
         cfg, fixture_text("css_page.html"), "https://shop.example.com/jobs"
     )
     assert [(p.title, p.url, p.location) for p in postings] == [
-        ("Barista", "/apply?role=barista", "Boulder, CO"),
+        ("Barista", "https://shop.example.com/apply?role=barista", "Boulder, CO"),
         ("Shift Lead (Remote training)", "https://shop.example.com/apply?role=lead", "Remote"),
     ]
     assert postings[1].remote is True
@@ -367,7 +367,7 @@ def test_css_selector_item_can_be_the_link() -> None:
     (posting,) = CssSelectorAdapter().parse(
         cfg, fixture_text("css_page.html"), "https://s.example/"
     )
-    assert (posting.title, posting.url) == ("Plain link opening", "/jobs/1")
+    assert (posting.title, posting.url) == ("Plain link opening", "https://s.example/jobs/1")
 
 
 @pytest.mark.parametrize(
@@ -408,6 +408,73 @@ def test_heuristic_finds_job_links() -> None:
 def test_heuristic_finds_nothing_on_plain_page() -> None:
     html = '<a href="/about">About</a><a href="/careers">Careers</a>'
     assert HeuristicAdapter().detect("https://x.example/careers", html) is None
+
+
+def test_heuristic_skips_site_menus_and_uses_card_titles() -> None:
+    """Shaped like big-company job boards: icon-font menus, "Learn more" links, policy footers."""
+    base = "https://www.example-search.test/about/careers/applications/jobs/results?location=Durham"
+    postings = HeuristicAdapter().parse(
+        AdapterConfig("heuristic"), fixture_text("heuristic_cards.html"), base
+    )
+    root = "https://www.example-search.test/about/careers/applications/jobs/results/"
+    assert [(p.title, p.url) for p in postings] == [
+        (
+            "Software Engineer III, Infrastructure",
+            root + "104856201937465821-software-engineer-iii-infrastructure?location=Durham",
+        ),
+        (
+            "Technical Program Manager, Cloud",
+            root + "093847561029384756-technical-program-manager-cloud",
+        ),
+        ("Data Center Technician", root + "112233445566778899-data-center-technician"),
+    ]
+
+
+def test_css_links_honour_base_href() -> None:
+    html = '<base href="/apply/"><ul><li class="o"><a href="42-welder">Welder</a></li></ul>'
+    cfg = AdapterConfig("css_selector", {"item_selector": "li.o"})
+    postings = CssSelectorAdapter().parse(cfg, html, "https://shop.example.com/jobs/list")
+    assert postings[0].url == "https://shop.example.com/apply/42-welder"
+
+
+def test_heuristic_ignores_careers_pages_that_are_not_postings() -> None:
+    base = "https://www.example-search.test/about/careers/applications/"
+    html = fixture_text("heuristic_landing.html")
+    assert HeuristicAdapter().detect(base, html) is None
+    assert job_list_link(html, base) == base + "jobs/results/"
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://x.test/jobs/12345", True),
+        ("https://x.test/jobs/7", True),
+        ("https://x.test/careers/nurse-icu-2041", True),
+        ("https://x.test/job/Raleigh-NC/Analyst_R0042", True),
+        ("https://x.test/jobs/senior-backend-engineer", True),
+        (
+            "https://x.test/o/3fa85f64-5717-4562-b3fc-2c963f66afa6/positions/3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            True,
+        ),
+        ("https://x.test/apply?jobid=8812", True),
+        ("https://x.test/job-1234-welder", True),
+        ("https://x.test/careers/how-we-work/", False),
+        ("https://x.test/careers/benefits-and-perks-overview", False),
+        ("https://x.test/jobs/results/", False),
+        ("https://x.test/jobs/saved", False),
+        ("https://x.test/jobs?job=engineering", False),
+        ("https://x.test/about/team-2020", False),
+    ],
+)
+def test_looks_like_posting(url: str, expected: bool) -> None:
+    assert looks_like_posting(url) is expected
+
+
+def test_job_list_link_stays_on_the_site() -> None:
+    html = '<a href="https://evil-example.test/jobs">Jobs</a><a href="https://jobs.example.test/">x</a>'
+    assert job_list_link(html, "https://www.example.test/careers") is None
+    html = '<a href="https://jobs.example.test/search">View all jobs</a><a href="/jobs">Jobs</a>'
+    assert job_list_link(html, "https://www.example.test/") == "https://jobs.example.test/search"
 
 
 async def test_workday_keeps_first_page_total_across_many_pages(
