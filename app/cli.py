@@ -14,23 +14,32 @@ from typing import TYPE_CHECKING
 from app import __version__
 from app.config import Settings, get_settings
 
+log = logging.getLogger("app.cli")
+
 if TYPE_CHECKING:
     from app.scraping.base import FetchContext
 
 
-def ensure_data_dir_writable(data_dir: Path) -> None:
-    """Exit with a helpful message if the data directory cannot be written."""
+def data_dir_problem(data_dir: Path) -> str | None:
+    """Explain why the data directory can't be used, or None if it's writable."""
     try:
         data_dir.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=data_dir, prefix=".write-test-"):
             pass
     except OSError as exc:
-        sys.exit(
-            f"ERROR: data directory {data_dir} is not writable by UID {os.getuid()} "
-            f"GID {os.getgid()} ({exc.strerror}).\n"
-            "On TrueNAS, give the 'apps' user (568) Modify permission on the dataset "
-            "mounted at /data."
+        return (
+            f"data directory {data_dir} is not writable by UID {os.getuid()} "
+            f"GID {os.getgid()} ({exc.strerror}). On TrueNAS, give the 'apps' user (568) "
+            "Modify permission on the dataset mounted at /data, or use the named volume from "
+            "docs/truenas-app.yaml."
         )
+    return None
+
+
+def ensure_data_dir_writable(data_dir: Path) -> None:
+    """Exit with a helpful message if the data directory cannot be written."""
+    if problem := data_dir_problem(data_dir):
+        sys.exit(f"ERROR: {problem}")
 
 
 def migrate(settings: Settings) -> None:
@@ -143,11 +152,70 @@ def configure_logging(settings: Settings) -> None:
     logging.getLogger("alembic.runtime.plugins").setLevel(logging.WARNING)
 
 
+def startup_problem(settings: Settings) -> str | None:
+    """Everything that stops the app from starting, checked before it starts. None if all is well.
+
+    Runs the database migrations as part of the check.
+    """
+    import sqlite3
+
+    from app.auth.bootstrap import BootstrapError, initial_password_from_env
+    from app.auth.passwords import PasswordPolicyError, validate_new_password
+    from app.db.migrate import DatabaseTooNewError, upgrade_to_head
+
+    if problem := data_dir_problem(settings.data_dir):
+        return problem
+    try:
+        result = upgrade_to_head(settings)
+    except DatabaseTooNewError as exc:
+        return str(exc)
+    except Exception as exc:
+        log.exception("Database upgrade failed")
+        return f"the database could not be upgraded ({exc}). Backups are in {settings.backup_dir}."
+    if result.changed:
+        print(f"Migrated database from {result.from_revision or 'empty'} to {result.to_revision}.")
+    else:
+        print(f"Database is up to date (revision {result.to_revision}).")
+
+    try:
+        env_password = initial_password_from_env(settings)
+    except BootstrapError as exc:
+        return str(exc)
+    if env_password is not None:
+        conn = sqlite3.connect(settings.db_path)
+        try:
+            password_set = (
+                conn.execute("SELECT 1 FROM settings WHERE key = 'password_hash'").fetchone()
+                is not None
+            )
+        finally:
+            conn.close()
+        if not password_set:  # APP_PASSWORD is only used when no password exists yet
+            try:
+                validate_new_password(env_password)
+            except PasswordPolicyError as exc:
+                return f"APP_PASSWORD is not acceptable: {exc}"
+    return None
+
+
 def serve(settings: Settings) -> None:
     import uvicorn
 
     configure_logging(settings)
-    migrate(settings)
+    if problem := startup_problem(settings):
+        from app.startup_error import startup_error_app
+
+        # Stay up and explain, rather than exit into a restart loop (see app/startup_error.py).
+        log.error("Job Monitor can't start: %s", problem)
+        print(f"ERROR: {problem}", file=sys.stderr, flush=True)
+        uvicorn.run(
+            startup_error_app(problem),
+            host="0.0.0.0",  # noqa: S104 - must listen on all interfaces inside the container
+            port=settings.port,
+            log_level=settings.log_level,
+            server_header=False,
+        )
+        return
     uvicorn.run(
         "app.main:create_app",
         factory=True,

@@ -48,13 +48,25 @@ class FetchResponse:
     headers: httpx.Headers
     content: bytes
 
+    def _decoded(self) -> httpx.Response:
+        # `content` was already decompressed while streaming. Drop the headers that describe the
+        # compressed form, or httpx would try to decompress it again (and fail on real sites).
+        headers = httpx.Headers(
+            [
+                (key, value)
+                for key, value in self.headers.multi_items()
+                if key.lower() not in ("content-encoding", "content-length")
+            ]
+        )
+        return httpx.Response(self.status, headers=headers, content=self.content)
+
     @property
     def text(self) -> str:
-        return httpx.Response(self.status, headers=self.headers, content=self.content).text
+        return self._decoded().text
 
     def json(self) -> Any:
         try:
-            return httpx.Response(self.status, headers=self.headers, content=self.content).json()
+            return self._decoded().json()
         except ValueError as exc:
             raise FetchError(f"{self.url} did not return valid JSON") from exc
 

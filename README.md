@@ -27,27 +27,69 @@ Contents: [Install on TrueNAS](#install-on-truenas-scale-2510) ·
 Since 24.10, TrueNAS runs apps with Docker Compose, so Job Monitor installs as a **custom app from
 YAML**. Menu names below are from 25.10 and may differ slightly in other versions.
 
-### 1. Create a dataset for its data
-
-1. Go to **Datasets**, select the pool or parent dataset you use for apps, and click
-   **Add Dataset**.
-2. Name it `jobmonitor` and set **Dataset Preset** to **Apps**. Save.
-3. Select the new dataset and, under **Permissions**, click **Edit**. Make sure the **apps** user
-   (UID 568) has **Modify** (or Full Control). Add an entry for it if it's missing, then save.
-
-Note the dataset's path, for example `/mnt/tank/apps/jobmonitor`.
-
-### 2. Install the app
-
 1. Go to **Apps**. If asked, choose the pool for apps.
 2. Open **Discover Apps**, click the three-dot menu at the top right, and choose
    **Install via YAML**.
-3. Name the app `jobmonitor` and paste the contents of
-   [`docs/truenas-app.yaml`](docs/truenas-app.yaml). Then change the two lines marked `CHANGE`:
-   - `TZ` to your [time zone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones),
-     e.g. `Europe/London`;
-   - `/mnt/tank/apps/jobmonitor` to your dataset's path from step 1.
+3. Name the app `jobmonitor` and paste the YAML below (the same as
+   [`docs/truenas-app.yaml`](docs/truenas-app.yaml)). Change the line marked `CHANGE`: set `TZ` to
+   your [time zone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), written with
+   underscores, e.g. `America/New_York` or `Europe/London`. An invalid name silently falls back to
+   UTC.
 4. Click **Save**. TrueNAS pulls the image and starts the app. Wait until it shows **Running**.
+
+<!-- truenas-app.yaml: start (generated from docs/truenas-app.yaml; a test keeps them identical) -->
+```yaml
+# Job Monitor for TrueNAS SCALE 25.10: Apps > Discover Apps > (three-dot menu) > Install via YAML.
+# Before installing, change the line marked CHANGE. See the README for step-by-step help.
+services:
+  jobmonitor:
+    # ":latest" follows the newest release, including future major versions. Use ":1" to stay
+    # on 1.x, or ":latest-lite" / ":1-lite" for a smaller image without the browser (careers
+    # pages that need JavaScript won't work).
+    image: ghcr.io/bhager42/jobmonitoring:latest
+    restart: unless-stopped
+    init: true
+    user: "568:568"                         # TrueNAS's "apps" user and group
+    ports:
+      - "30880:8080"                        # host:container. Change 30880 if it's taken.
+    environment:
+      TZ: "America/New_York"                # CHANGE to your time zone (note the underscores)
+      SECURE_COOKIES: "false"               # "true" only behind an HTTPS reverse proxy
+      TRUST_PROXY: "false"                  # "true" only behind a reverse proxy
+      # APP_PASSWORD: "at least 12 characters"   # optional; otherwise use the setup token in the logs
+    volumes:
+      # A Docker volume that TrueNAS manages: works with no setup. Deleting the app may delete it,
+      # so download a backup first (Settings > Backups).
+      - jobmonitor:/data
+      # Or keep the data in a dataset of your own (for your own snapshots): replace the line
+      # above with the one below, and give the "apps" user (568) Modify permission on the dataset.
+      # - /mnt/tank/apps/jobmonitor:/data
+    shm_size: "512m"                        # room for the headless browser
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  jobmonitor:
+```
+<!-- truenas-app.yaml: end -->
+
+The app keeps its data in a Docker volume that TrueNAS manages, so there's nothing to set up first.
+**Deleting the app in TrueNAS may delete that volume too**, so download a backup first
+(**Settings > Backups**).
 
 The app listens on port **30880**: open `http://<your-truenas-address>:30880`.
 
@@ -55,6 +97,20 @@ The file uses image tag `:latest`, which follows the newest release, including f
 versions (which may bring breaking changes). To stay on 1.x, use `:1` instead. There are also smaller
 `-lite` images (`:latest-lite`, `:1-lite`) without the headless browser. They work for most sites,
 but can't read careers pages that only show jobs after running JavaScript.
+
+### Optional: keep the data in your own dataset
+
+Use this if you want the data in a dataset you control, for example to include it in your own
+snapshot schedule.
+
+1. **Datasets > Add Dataset**: name it `jobmonitor` and set **Dataset Preset** to **Apps**.
+2. Select it and, under **Permissions**, click **Edit**. Make sure the **apps** user (UID 568) has
+   **Modify** (or Full Control), adding an entry if needed, then save.
+3. In the YAML, replace the line `- jobmonitor:/data` with the commented-out
+   `- /mnt/tank/apps/jobmonitor:/data`, using your dataset's path.
+
+If the app can't write to the folder, it doesn't start. Instead it shows the problem on its page and
+in its log, and TrueNAS marks it unhealthy.
 
 ## First sign-in
 
@@ -128,13 +184,30 @@ database a newer one has upgraded, it refuses to start and says so, instead of d
 
 - **Automatic:** a backup is saved every day to `backups/daily-<time>.db` in the data folder. The
   newest 7 are kept (`BACKUP_KEEP`).
-- **On demand:** **Settings > Backups > Download a backup now.**
-- **Snapshots:** TrueNAS snapshots of the dataset capture everything, including `notify.key`.
+- **On demand:** **Settings > Backups > Download a backup now.** Do this before deleting the app.
+- **Snapshots:** if you keep the data in your own dataset, its TrueNAS snapshots capture everything,
+  including `notify.key`.
 
-To restore: stop the app, replace `jobmonitor.db` in the data folder with a backup file (and delete
-any `jobmonitor.db-wal` and `jobmonitor.db-shm` next to it), then start the app. Keep `notify.key` from
-the same install. Without it, notification targets show as "saved by another install" and need to be
-added again. Everything else is unaffected.
+To restore, put the backup file on the NAS (e.g. through an SMB share), stop the app, and in
+**System > Shell** find the data folder:
+
+```bash
+sudo docker volume ls | grep jobmonitor
+```
+
+```bash
+sudo docker volume inspect -f '{{ .Mountpoint }}' <volume name from above>
+```
+
+Then replace `jobmonitor.db` in that folder with the backup, remove the database's side files, and
+give it back to the apps user (for a dataset, use the dataset's path as the folder):
+
+```bash
+cd <mountpoint> && sudo cp /path/to/backup.db jobmonitor.db && sudo rm -f jobmonitor.db-wal jobmonitor.db-shm && sudo chown 568:568 jobmonitor.db
+```
+
+Start the app. Keep `notify.key` from the same install. Without it, notification targets show as
+"saved by another install" and need to be added again. Everything else is unaffected.
 
 ## Remote access
 
@@ -169,9 +242,17 @@ Set these as `environment` entries in the YAML. Everything else is configured in
 
 ## Troubleshooting
 
-**The app keeps restarting and the log says "data directory /data is not writable by UID 568".**
-The **apps** user can't write to the dataset. Edit the dataset's permissions (Install step 1.3) so
-**apps (568)** has Modify, then restart the app.
+**The page says "Job Monitor can't start" and TrueNAS shows the app as unhealthy.** The page and the
+log explain why. The most common reason is "data directory /data is not writable by UID 568": the
+YAML uses your own dataset, but the **apps** user can't write to it. Give **apps (568)** Modify on the
+dataset (see [Optional: keep the data in your own dataset](#optional-keep-the-data-in-your-own-dataset)),
+or switch back to the default `- jobmonitor:/data` volume, then restart the app. Other reasons
+include an `APP_PASSWORD` shorter than 12 characters.
+
+**Version 1.0.0 cycled between Deploying and Stopped and couldn't be stopped.** That was the same
+problem; 1.0.0 exited instead of explaining it. To stop it, open **System > Shell** and run
+`sudo docker ps -a | grep jobmonitor`, then `sudo docker update --restart=no <name>` and
+`sudo docker stop <name>`. Then update to the latest image and fix the cause.
 
 **The app won't start: "port is already allocated" or similar.** Another app uses port 30880. Edit the
 app and change the first number in `"30880:8080"` to a free port, e.g. `"30881:8080"`, then open that

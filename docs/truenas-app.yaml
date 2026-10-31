@@ -1,5 +1,5 @@
 # Job Monitor for TrueNAS SCALE 25.10: Apps > Discover Apps > (three-dot menu) > Install via YAML.
-# Before installing, change the two lines marked CHANGE. See the README for step-by-step help.
+# Before installing, change the line marked CHANGE. See the README for step-by-step help.
 services:
   jobmonitor:
     # ":latest" follows the newest release, including future major versions. Use ":1" to stay
@@ -12,12 +12,17 @@ services:
     ports:
       - "30880:8080"                        # host:container. Change 30880 if it's taken.
     environment:
-      TZ: "America/Denver"                  # CHANGE to your time zone
+      TZ: "America/New_York"                # CHANGE to your time zone (note the underscores)
       SECURE_COOKIES: "false"               # "true" only behind an HTTPS reverse proxy
       TRUST_PROXY: "false"                  # "true" only behind a reverse proxy
       # APP_PASSWORD: "at least 12 characters"   # optional; otherwise use the setup token in the logs
     volumes:
-      - /mnt/tank/apps/jobmonitor:/data     # CHANGE "tank" to your pool's name
+      # A Docker volume that TrueNAS manages: works with no setup. Deleting the app may delete it,
+      # so download a backup first (Settings > Backups).
+      - jobmonitor:/data
+      # Or keep the data in a dataset of your own (for your own snapshots): replace the line
+      # above with the one below, and give the "apps" user (568) Modify permission on the dataset.
+      # - /mnt/tank/apps/jobmonitor:/data
     shm_size: "512m"                        # room for the headless browser
     security_opt:
       - no-new-privileges:true
@@ -35,3 +40,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+
+volumes:
+  jobmonitor:

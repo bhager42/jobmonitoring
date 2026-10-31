@@ -50,8 +50,10 @@ every Dependabot `uv` update fail.)
   either push `vX.Y.Z` or run the Release workflow with `X.Y.Z`. The first time, make the GHCR
   package public. The workflow creates the GitHub release with that version's CHANGELOG entry.
 - `docs/truenas-app.yaml` is user-facing. Keep it in sync with the README install steps, and keep the
-  `image:`, data path and `"30880:8080"` lines exactly as `scripts/truenas-acceptance.sh` expects
-  (it substitutes them).
+  `image: ...:latest`, `- jobmonitor:/data` and `"30880:8080"` lines exactly as
+  `scripts/truenas-acceptance.sh` expects (it substitutes them). That script checks three storage
+  set-ups: the default named volume, a dataset folder owned by 568, and a folder 568 can't write to
+  (which must give a running container that answers 503 and shows the problem, with no restarts).
 
 ## Vulnerability handling
 - CI audits every locked Python package with pip-audit (OSV) and scans the built image with Grype
@@ -252,6 +254,14 @@ GitHub Actions uses the defaults.
 - **E2E runs against `jobmonitor serve` by default; with `E2E_IMAGE` it runs against an image**
   (CI does this for both variants, with `--network host` so the container can reach the test site).
 - **Host port 30880, not 8686** (plan §11). 8686 is Lidarr's default, a common TrueNAS app.
+- **The TrueNAS YAML stores data in a named volume** (owner's choice, after 1.0.0's host-path
+  default failed on a real TrueNAS: the folder wasn't writable by 568). A dataset folder is the
+  commented-out alternative.
+- **`jobmonitor serve` never exits on a startup problem.** `cli.startup_problem` checks the data
+  folder, migrations and `APP_PASSWORD`/`APP_PASSWORD_FILE` first. On a problem it runs
+  `app/startup_error.py` instead: every page returns 503 with the message, and so does `/healthz`.
+  Exiting made Docker's restart policy loop, which TrueNAS showed as Deploying/Stopped cycling that
+  couldn't be stopped. (`jobmonitor migrate` and other one-shot commands still exit with an error.)
 - **The TrueNAS YAML uses `:latest`** (owner's choice), so it follows every release, including a
   future 2.x. The comment and README point to `:1` for anyone who wants to stay on 1.x.
   `scripts/truenas-acceptance.sh` substitutes the `image: ...:latest` line.

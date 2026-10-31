@@ -1,5 +1,6 @@
 """End-to-end fixtures: a fake careers site, the real app in a subprocess, and headless Chromium."""
 
+import gzip
 import json
 import os
 import re
@@ -60,6 +61,10 @@ def jobs_site() -> Iterator[JobsSite]:
                 body, status = b"not found", 404
             self.send_response(status)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            # Compress like real sites do (a double-decompression bug once broke every real site).
+            if "gzip" in self.headers.get("Accept-Encoding", ""):
+                body = gzip.compress(body)
+                self.send_header("Content-Encoding", "gzip")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)

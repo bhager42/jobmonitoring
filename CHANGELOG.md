@@ -5,12 +5,24 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [1.0.1] - 2026-10-31
 
-### Changed
-- The TrueNAS install file (`docs/truenas-app.yaml`) now uses the `:latest` image tag, so it follows
-  every release. To stay on 1.x, use `:1` instead; the file and the README explain both, and the
-  smaller `:latest-lite` / `:1-lite` images.
+### Fixed
+- **No more restart loop on TrueNAS when the app can't start.** If the data folder isn't writable
+  (the usual cause), the database can't be upgraded, or `APP_PASSWORD` is invalid, the app now stays
+  running and shows the problem on its page and in its log, and `/healthz` reports it, so TrueNAS
+  marks the app unhealthy. Before, it exited, and the restart policy made the app cycle between
+  Deploying and Stopped in a way TrueNAS couldn't stop.
+- **Adding a monitor failed with "incorrect header check" on sites that compress their pages**
+  (gzip or deflate), such as Google's and Lenovo's careers sites. The page was decompressed twice;
+  now it is decoded once.
 
-No changes to the app itself.
+### Changed
+- The TrueNAS install file (`docs/truenas-app.yaml`) now keeps the data in a **Docker volume that
+  TrueNAS manages**, so it works with no dataset or permission setup. Keeping the data in your own
+  dataset is still supported, as a commented-out line in the file and in the README.
+- The install file uses the **`:latest`** image tag, so it follows every release. To stay on 1.x, use
+  `:1`. The smaller images are `:latest-lite` and `:1-lite`.
+- The README's install, backup/restore and troubleshooting sections match the new defaults. The
+  example time zone shows the underscore format (`America/New_York`).
 
 ## [1.0.0] - 2026-10-31
 

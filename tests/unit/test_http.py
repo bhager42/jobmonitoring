@@ -263,3 +263,44 @@ async def test_spaces_requests_to_the_same_host(mock: respx.MockRouter) -> None:
         now[0] += 0.5
         await client.get_text(f"{SITE}/b", respect_robots=False)
         assert sleeps.calls == [1.5]
+
+
+# --- compressed responses (most real sites) ---------------------------------------------------
+
+
+def _compress(encoding: str, data: bytes) -> bytes:
+    import gzip
+    import zlib
+
+    return {"gzip": gzip.compress, "deflate": zlib.compress}[encoding](data)
+
+
+# httpx only asks for brotli/zstd when those libraries are installed, so gzip and deflate are what
+# servers send to this app.
+@pytest.mark.parametrize("encoding", ["gzip", "deflate"])
+async def test_compressed_pages_are_decoded_once(
+    mock: respx.MockRouter, client: PoliteClient, encoding: str
+) -> None:
+    """A real bug: text was decompressed a second time and failed on every compressed site."""
+    page = "<h1>Careers</h1><a href='/jobs/1'>Ingénieur</a>".encode()
+    mock.get(f"{SITE}/careers").respond(
+        200,
+        content=_compress(encoding, page),
+        headers={"Content-Encoding": encoding, "Content-Type": "text/html; charset=utf-8"},
+    )
+    response = await client.get_text(f"{SITE}/careers", respect_robots=False)
+    assert response.text == page.decode()
+
+
+async def test_compressed_json_is_decoded_once(
+    mock: respx.MockRouter, client: PoliteClient
+) -> None:
+    import gzip
+    import json
+
+    mock.get(f"{SITE}/api/jobs").respond(
+        200,
+        content=gzip.compress(json.dumps({"jobs": [{"id": 1}]}).encode()),
+        headers={"Content-Encoding": "gzip", "Content-Type": "application/json"},
+    )
+    assert await client.get_json(f"{SITE}/api/jobs") == {"jobs": [{"id": 1}]}
