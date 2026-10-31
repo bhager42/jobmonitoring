@@ -38,12 +38,17 @@ every Dependabot `uv` update fail.)
 - CI (`.github/workflows/ci.yml`) runs on every push, every PR, daily, and when called by the
   release workflow. For both image variants (full and `-lite`) it runs the smoke test, the TrueNAS
   acceptance script, the browser journey against the image, and Grype.
-- `release.yml` runs only for tags `vX.Y.Z`. It calls CI, then publishes
+- `release.yml` runs for tags `vX.Y.Z`, or from the Actions tab (Release > Run workflow) with a
+  version. The manual path creates the tag itself, on the commit it tested. Claude cloud sessions
+  can't push tags (the git proxy only accepts pushes to the session branch), so they start releases
+  this way, with the GitHub tool's `run_workflow`. Both paths check that the version matches
+  `app/__init__.py` and has a CHANGELOG entry, call CI, then publish
   `ghcr.io/bhager42/jobmonitoring` with tags `X.Y.Z`, `X.Y`, `X` and `latest` (plus `-lite`
   versions), along with an SBOM and provenance. Pre-release tags (`v1.2.0-rc.1`) get only their exact
   version. Branch pushes never publish.
-- To release: bump `app/__init__.py`, date the `CHANGELOG.md` entry, merge, then
-  `git tag vX.Y.Z && git push origin vX.Y.Z`. The first time, make the GHCR package public.
+- To release: bump `app/__init__.py`, date the `CHANGELOG.md` entry, merge, wait for green CI, then
+  either push `vX.Y.Z` or run the Release workflow with `X.Y.Z`. The first time, make the GHCR
+  package public. The workflow creates the GitHub release with that version's CHANGELOG entry.
 - `docs/truenas-app.yaml` is user-facing. Keep it in sync with the README install steps, and keep the
   `image:`, data path and `"30880:8080"` lines exactly as `scripts/truenas-acceptance.sh` expects
   (it substitutes them).
@@ -98,8 +103,12 @@ GitHub Actions uses the defaults.
   shapes, using fictional companies.** They were not captured live (the sandbox network blocks
   these hosts). If a live site disagrees, capture and anonymize a real response, replace the
   fixture, and fix the adapter.
-- Browser tests use a real Chromium and skip if none can start. Locally, set `CHROMIUM_EXECUTABLE`
-  (in the cloud sandbox: `/opt/pw-browsers/chromium-*/chrome-linux64/chrome`).
+- Browser tests use a real Chromium and skip if none can start. They prefer a preinstalled
+  **headless shell** (`/opt/pw-browsers/chromium_headless_shell-*/*/chrome-headless-shell`), which
+  is what the image ships. The full Chromium build makes its own calls to Google services
+  (accounts, check-in, updater, google.com) even with `LAUNCH_ARGS`, while the headless shell makes
+  none; this was measured with Chromium's net log and the sandbox proxy. `CHROMIUM_EXECUTABLE`
+  overrides the choice.
 
 ## Web UI conventions
 - Server-rendered Jinja2 plus **htmx 2.0.11, vendored** in `app/web/static/js/` (hash-checked by

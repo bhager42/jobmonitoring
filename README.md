@@ -246,8 +246,9 @@ DATA_DIR=./data uv run jobmonitor serve       # http://localhost:8080
 docker compose -f compose.dev.yaml up --build # the hardened container
 ```
 
-**Releasing:** update `app/__init__.py` and `CHANGELOG.md`, merge, then push a tag
-(`git tag v1.2.3 && git push origin v1.2.3`). The **Release** workflow runs all checks against both
-images, then publishes them to GHCR. The first time, make the package public under the repository's
+**Releasing:** update `app/__init__.py` and `CHANGELOG.md`, merge, then either push a tag
+(`git tag v1.2.3 && git push origin v1.2.3`) or open **Actions > Release > Run workflow** and enter
+`1.2.3`. The **Release** workflow runs all checks against both images, publishes them to GHCR, and
+creates the GitHub release. The first time, make the package public under the repository's
 **Packages** settings (or add a registry credential in TrueNAS under **Apps > Configuration > Manage
 Container Image Registries**).

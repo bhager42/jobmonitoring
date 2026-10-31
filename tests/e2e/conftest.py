@@ -187,10 +187,21 @@ def app_server(tmp_path: Path) -> Iterator[AppServer]:
 
 
 def chromium_executable() -> str | None:
+    """CHROMIUM_EXECUTABLE, else a preinstalled headless shell (what the image ships), else None.
+
+    The full Chromium build makes its own calls to Google services (sync, updates, check-in)
+    even with the app's flags; the headless shell doesn't, so tests use it like production.
+    """
     if path := os.environ.get("CHROMIUM_EXECUTABLE"):
         return path
-    found = sorted(Path("/opt/pw-browsers").glob("chromium-*/chrome-linux*/chrome"))
-    return str(found[-1]) if found else None
+    browsers = Path("/opt/pw-browsers")
+    for pattern in (
+        "chromium_headless_shell-*/*/chrome-headless-shell",
+        "chromium-*/chrome-linux*/chrome",
+    ):
+        if found := sorted(browsers.glob(pattern)):
+            return str(found[-1])
+    return None
 
 
 @pytest.fixture
