@@ -302,6 +302,65 @@ class CheckRunner:
         run.duration_ms = int((time.monotonic() - started) * 1000)
 
 
+def view_of(posting: Posting) -> PostingView:
+    """The matcher's view of a stored posting."""
+    return PostingView(
+        title=posting.title,
+        location=posting.location,
+        department=posting.department,
+        employment_type=posting.employment_type,
+        remote=posting.remote,
+        description_text=posting.description_text,
+        posted_at=posting.posted_at,
+    )
+
+
+@dataclass(frozen=True)
+class Reapplied:
+    added: int
+    removed: int
+
+
+async def reapply_criteria(db: AsyncSession, monitor: Monitor, now: datetime) -> Reapplied:
+    """Bring a monitor's matches in line with its (changed) criteria, without fetching anything.
+
+    Checks only judge postings when they are first seen, so after an edit the postings already
+    listed are judged again here: open postings that now fit get a match (shown in the UI, never
+    notified, as they aren't new), and matches that no longer fit are removed. Dismissed matches
+    are kept, so loosening a filter later doesn't bring back something the user threw away.
+    """
+    criteria = Criteria.from_json(monitor.criteria)
+    postings = (
+        await db.scalars(
+            select(Posting).where(Posting.monitor_id == monitor.id, Posting.is_active.is_(True))
+        )
+    ).all()
+    existing = {
+        m.posting_id: m
+        for m in (await db.scalars(select(Match).where(Match.monitor_id == monitor.id))).all()
+    }
+    added = removed = 0
+    for posting in postings:
+        result = matches(view_of(posting), criteria, now=now)
+        match = existing.get(posting.id)
+        if result.matched and match is None:
+            db.add(
+                Match(
+                    monitor_id=monitor.id,
+                    posting_id=posting.id,
+                    reasons=result.reasons,
+                    matched_at=now,
+                )
+            )
+            added += 1
+        elif result.matched and match is not None:
+            match.reasons = result.reasons
+        elif match is not None and not match.dismissed:
+            await db.delete(match)
+            removed += 1
+    return Reapplied(added, removed)
+
+
 def _copy_fields(row: Posting, raw: RawPosting) -> None:
     row.external_id = raw.external_id
     row.title = raw.title

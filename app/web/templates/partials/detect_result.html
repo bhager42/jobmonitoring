@@ -3,10 +3,14 @@
   {% if detect_error %}
     <p class="alert alert-error" role="alert" tabindex="-1" data-focus-on-load>{{ detect_error }}</p>
   {% elif preview %}
+    {% if preview.from_last_check %}
+    <p class="hint">Showing the <strong>{{ preview.postings | length }}</strong> posting{{ "s" if preview.postings | length != 1 }} the last check found. Find jobs reads the page again.</p>
+    {% else %}
     <p class="alert alert-success" tabindex="-1" data-focus-on-load>
       Found <strong>{{ preview.postings | length }}</strong> posting{{ "s" if preview.postings | length != 1 }}
       using {{ ADAPTER_LABELS.get(preview.config.adapter, preview.config.adapter) }}{% if preview.rendered %} (read with the browser){% endif %}.
     </p>
+    {% endif %}
     {% include "partials/match_preview.html" %}
   {% else %}
     <p class="hint">Find jobs reads the page now and shows what Job Monitor can see there. You can also save without it; the first check works it out.</p>

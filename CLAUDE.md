@@ -167,6 +167,11 @@ GitHub Actions uses the defaults.
   (False means already queued or running). After creating or editing a monitor, call `wake()`
   (or set `next_check_at=None` to make it due at once). `is_busy(id)` tells the UI a check is in
   progress. Use `checks.is_backing_off(monitor)` to flag monitors in the UI.
+- Checks judge a posting only when it is first seen. **When the UI changes a monitor's criteria**
+  (same source), `checks.reapply_criteria` re-judges the active postings: new matches are not
+  notified (`notified_at` stays empty; the notifier only gets a run's match ids), non-fitting
+  matches are deleted unless dismissed. The Edit page seeds a `Preview(from_last_check=True)` from
+  the stored postings so the live preview works without re-detecting.
 - Daily maintenance (`services/maintenance.py`) runs from the scheduler tick: it prunes 90-day-old
   check runs and 180-day-old unmatched inactive postings, then backs up to `/data/backups/daily-*.db`.
 - Tests that build the app use `create_app(..., start_scheduler=False)` (see

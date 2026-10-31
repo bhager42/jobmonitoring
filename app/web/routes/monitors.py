@@ -14,9 +14,9 @@ from app.db.engine import get_session
 from app.db.models import CheckRun, Match, Monitor, Posting, utcnow
 from app.matching.criteria import Criteria
 from app.matching.matcher import MatchResult, PostingView, matches
-from app.scraping.base import AdapterConfig, FetchError
+from app.scraping.base import AdapterConfig, FetchError, RawPosting
 from app.scraping.detect import detect
-from app.services.checks import is_backing_off
+from app.services.checks import is_backing_off, reapply_criteria, view_of
 from app.services.fetching import make_context
 from app.services.scheduler import Scheduler
 from app.web.forms import MonitorForm
@@ -49,18 +49,6 @@ async def get_monitor(db: AsyncSession, monitor_id: int) -> Monitor:
     if monitor is None:
         raise HTTPException(404, "No such monitor.")
     return monitor
-
-
-def view_of(posting: Posting) -> PostingView:
-    return PostingView(
-        title=posting.title,
-        location=posting.location,
-        department=posting.department,
-        employment_type=posting.employment_type,
-        remote=posting.remote,
-        description_text=posting.description_text,
-        posted_at=posting.posted_at,
-    )
 
 
 @dataclass(frozen=True)
@@ -275,7 +263,43 @@ async def create_monitor(request: Request, db: DbSession) -> Response:
 @router.get("/{monitor_id}/edit", response_class=HTMLResponse)
 async def edit_monitor(request: Request, db: DbSession, monitor_id: int) -> Response:
     monitor = await get_monitor(db, monitor_id)
-    return form_page(request, MonitorForm.from_monitor(monitor), monitor=monitor)
+    form = MonitorForm.from_monitor(monitor)
+    form.preview_token = await _stored_preview(request, db, monitor, form) or ""
+    return form_page(request, form, monitor=monitor)
+
+
+async def _stored_preview(
+    request: Request, db: AsyncSession, monitor: Monitor, form: MonitorForm
+) -> str | None:
+    """Preview the criteria against the postings the last check found, so edits show live."""
+    if monitor.adapter is None:
+        return None
+    rows = (
+        await db.scalars(
+            select(Posting)
+            .where(Posting.monitor_id == monitor.id, Posting.is_active.is_(True))
+            .order_by(Posting.first_seen_at.desc(), Posting.id.desc())
+        )
+    ).all()
+    if not rows:
+        return None
+    postings = [
+        RawPosting(
+            title=row.title,
+            url=row.url,
+            external_id=row.external_id,
+            location=row.location,
+            department=row.department,
+            employment_type=row.employment_type,
+            remote=row.remote,
+            posted_at=row.posted_at,
+            description_text=row.description_text,
+        )
+        for row in rows
+    ]
+    config = AdapterConfig(monitor.adapter, dict(monitor.adapter_config or {}))
+    preview = Preview(form.url, form.css, config, postings, rendered=False, from_last_check=True)
+    return previews_of(request).put(preview)
 
 
 @router.post("/{monitor_id}", response_class=HTMLResponse)
@@ -285,7 +309,13 @@ async def update_monitor(request: Request, db: DbSession, monitor_id: int) -> Re
     if not form.validate():
         return form_page(request, form, monitor=monitor, status_code=422)
     old_interval = monitor.interval_hours
+    old_criteria = monitor.criteria
     _apply_form(monitor, form, previews_of(request).get(form.preview_token), is_new=False)
+    query = "saved=true"
+    # A changed source resets the baseline instead; the next check judges everything afresh.
+    if monitor.criteria != old_criteria and monitor.baseline_done:
+        changes = await reapply_criteria(db, monitor, utcnow())
+        query += f"&added={changes.added}&removed={changes.removed}"
     if (
         monitor.next_check_at is not None
         and monitor.last_check_at is not None
@@ -296,7 +326,7 @@ async def update_monitor(request: Request, db: DbSession, monitor_id: int) -> Re
         ) * (monitor.interval_hours / old_interval)
     await db.commit()
     scheduler_of(request).wake()
-    return RedirectResponse(f"/monitors/{monitor.id}?saved=true", 303)
+    return RedirectResponse(f"/monitors/{monitor.id}?{query}", 303)
 
 
 # --- detail ----------------------------------------------------------------------------------
@@ -310,6 +340,8 @@ async def monitor_detail(
     matching: bool = False,
     created: bool = False,
     saved: bool = False,
+    added: int | None = None,
+    removed: int | None = None,
 ) -> Response:
     monitor = await get_monitor(db, monitor_id)
     runs = (
@@ -371,6 +403,9 @@ async def monitor_detail(
             "backing_off": is_backing_off(monitor),
             "created": created,
             "saved": saved,
+            "added": max(added or 0, 0),
+            "removed": max(removed or 0, 0),
+            "reapplied": added is not None or removed is not None,
         },
     )
 

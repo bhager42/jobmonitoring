@@ -11,7 +11,11 @@
 </div>
 
 {% if created %}<p class="alert alert-success" role="status">Monitor saved. The first check starts in a moment and records what's listed now.</p>{% endif %}
-{% if saved %}<p class="alert alert-success" role="status">Changes saved.</p>{% endif %}
+{% if saved %}<p class="alert alert-success" role="status">Changes saved.
+  {%- if reapplied %} The new criteria were applied to the postings listed now:
+  {%- if added or removed %} {{ added }} new match{{ "es" if added != 1 }}, {{ removed }} removed.
+  {%- if added %} Matches found this way are not sent as notifications.{% endif %}
+  {%- else %} the matches didn't change.{% endif %}{% endif %}</p>{% endif %}
 
 <p class="monitor-source">
   <a href="{{ monitor.url }}" target="_blank" rel="noopener noreferrer">{{ monitor.url }}<span class="visually-hidden"> (opens in a new tab)</span></a>

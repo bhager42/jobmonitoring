@@ -18,6 +18,7 @@ class Preview:
     config: AdapterConfig
     postings: list[RawPosting]
     rendered: bool
+    from_last_check: bool = False  # the monitor's stored postings, not a fresh read of the page
     created: float = field(default_factory=time.monotonic)
 
     def same_source(self, url: str, css: dict[str, str]) -> bool:

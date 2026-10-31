@@ -3,6 +3,19 @@
 All notable changes to Job Monitor. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.3] - 2026-10-31
+
+### Fixed
+- **Changing a saved monitor's criteria now updates its matches.** Before, criteria were applied
+  only when a posting was first seen, so removing a filter (e.g. a location) never brought earlier
+  results back, and adding one left matches that no longer fit. Saving changed criteria now judges
+  the postings listed now again: ones that fit become matches (shown on the dashboard, not sent as
+  notifications), and matches that no longer fit are removed. Dismissed matches stay dismissed.
+
+### Changed
+- The Edit page previews the criteria live against the postings the last check found, without
+  pressing Find jobs.
+
 ## [1.0.2] - 2026-10-31
 
 ### Fixed

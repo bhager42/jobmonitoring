@@ -270,6 +270,76 @@ def test_editing_the_url_restarts_the_baseline(
     ) == [(None, 0, None)]
 
 
+def test_editing_criteria_rejudges_the_listed_postings(
+    ui: tuple[TestClient, str], password_settings: Settings
+) -> None:
+    """Adding a filter and removing it again brings the earlier matches back."""
+    client, csrf = ui
+    monitor_id = create(client, csrf)
+    db(
+        password_settings,
+        "UPDATE monitors SET adapter='greenhouse', adapter_config='{\"token\": \"examplecorp\"}',"
+        " baseline_done=1 WHERE id = ?",
+        monitor_id,
+    )
+    jobs = [
+        ("Backend Engineer", "Durham, NC", 1),
+        ("Data Engineer", "Austin, TX", 1),
+        ("Office Manager", "Durham, NC", 1),
+        ("Old Engineer role", "Durham, NC", 0),  # no longer listed: never re-judged
+    ]
+    for n, (title, location, active) in enumerate(jobs):
+        db(
+            password_settings,
+            "INSERT INTO postings (monitor_id, fingerprint, title, url, location, first_seen_at,"
+            " last_seen_at, missing_count, is_active)"
+            " VALUES (?, ?, ?, ?, ?, '2026-10-01', '2026-10-01', 0, ?)",
+            monitor_id, f"{n:064d}", title, f"https://acme.example/jobs/{n}", location, active,
+        )  # fmt: skip
+
+    def matched() -> list[str]:
+        rows = db(
+            password_settings,
+            "SELECT p.title FROM matches m JOIN postings p ON p.id = m.posting_id"
+            " WHERE m.monitor_id = ? ORDER BY p.id",
+            monitor_id,
+        )
+        return [title for (title,) in rows]
+
+    # The edit page previews the criteria against what the last check found.
+    edit = client.get(f"/monitors/{monitor_id}/edit").text
+    assert "the last check found" in edit
+    assert "Office Manager" in edit
+
+    response = client.post(f"/monitors/{monitor_id}", data=form(csrf, keywords_any="engineer"))
+    assert response.headers["location"].endswith("saved=true&added=2&removed=0")
+    assert matched() == ["Backend Engineer", "Data Engineer"]
+    page = client.get(response.headers["location"]).text
+    assert "2 new matches, 0 removed" in page
+    assert "not sent as notifications" in page
+
+    client.post(
+        f"/monitors/{monitor_id}", data=form(csrf, keywords_any="engineer", locations_any="durham")
+    )
+    assert matched() == ["Backend Engineer"]
+
+    # Dismissed matches stay dismissed when a filter is loosened again.
+    db(password_settings, "UPDATE matches SET dismissed = 1 WHERE monitor_id = ?", monitor_id)
+    response = client.post(f"/monitors/{monitor_id}", data=form(csrf, keywords_any="engineer"))
+    assert response.headers["location"].endswith("added=1&removed=0")
+    assert matched() == ["Backend Engineer", "Data Engineer"]
+
+    # Saving without changing the criteria leaves the matches alone.
+    response = client.post(f"/monitors/{monitor_id}", data=form(csrf, keywords_any="engineer"))
+    assert response.headers["location"].endswith("?saved=true")
+    assert "the matches didn't change" not in client.get(response.headers["location"]).text
+
+    # Nothing is sent for matches found by an edit.
+    assert db(password_settings, "SELECT count(*) FROM matches WHERE notified_at IS NOT NULL") == [
+        (0,)
+    ]
+
+
 def test_shorter_interval_brings_the_next_check_forward(
     ui: tuple[TestClient, str], password_settings: Settings
 ) -> None:

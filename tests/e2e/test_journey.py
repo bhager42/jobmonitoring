@@ -77,6 +77,19 @@ def test_setup_monitor_check_and_match(
     expect(result).to_contain_text("Found 3 postings")
     expect(result).to_contain_text("links that look like job postings")
 
+    # Adding a filter and taking it away again brings every posting back.
+    preview = page.locator("#match-preview")
+    expect(preview).to_contain_text("3 of the 3 postings match")
+    page.get_by_label("Locations").fill("denver")
+    expect(preview).to_contain_text("0 of the 3 postings match")
+    page.get_by_label("Locations").fill("")
+    expect(preview).to_contain_text("3 of the 3 postings match")
+    page.get_by_label("Locations").press_sequentially("austin")
+    expect(preview).to_contain_text("0 of the 3 postings match")
+    for _ in "austin":
+        page.get_by_label("Locations").press("Backspace")
+    expect(preview).to_contain_text("3 of the 3 postings match")
+
     page.get_by_label("Any of these words").fill("nurse")
     expect(page.locator("#match-preview")).to_contain_text("1 of the 3 postings match")
     expect(page.locator("#match-preview li.is-match")).to_contain_text("Registered Nurse - ICU")
@@ -132,8 +145,25 @@ def test_setup_monitor_check_and_match(
         "aria-checked", "true"
     )
     audit(page, "monitors", problems)
+
+    # --- edit the criteria: the listed postings are judged again ---------------------------
+    page.get_by_role("link", name="Edit Example Hospital").click()
+    preview = page.locator("#match-preview")
+    expect(page.locator("#detect-result")).to_contain_text("the last check found")
+    expect(preview).to_contain_text("2 of the 4 postings match")
+    audit(page, "monitor-edit", problems)
+    page.get_by_label("Any of these words").fill("")
+    expect(preview).to_contain_text("4 of the 4 postings match")
+    page.get_by_role("button", name="Save changes").click()
+    # The two without "nurse", and Registered Nurse (only recorded by the first check), now match.
+    expect(page.get_by_text("3 new matches, 0 removed")).to_be_visible()
+    page.goto(f"{app_server.url}/matches?state=all")
+    expect(page.locator(".match-card")).to_have_count(4)
+
     page.goto(f"{app_server.url}/settings")
     expect(page.get_by_text("Last notification sent")).to_be_visible()
+    page.wait_for_timeout(1000)
+    assert len(webhook.received) == 2  # matches found by an edit aren't sent
 
     # Sign out; the login page is checked too.
     page.get_by_role("button", name="Sign out").click()
