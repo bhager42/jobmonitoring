@@ -34,7 +34,7 @@ browser = [
 [dependency-groups]
 dev = [
     "httpx",
-    "hypothesis>=6.169.2",
+    "hypothesis>=6.170.5",
     "pyright",
     "pytest",
     "pytest-asyncio>=1.4.0",
