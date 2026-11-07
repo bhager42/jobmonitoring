@@ -60,10 +60,9 @@ packages = ["app"]
 exclude-newer = "14 days"
 # Security exceptions to the two-week rule. Each entry names the advisory; remove the entry once
 # it is more than 14 days old (the rolling window then covers it).
-#   certifi: GHSA-6q48-6c7w-9gw2 (compromised emSign intermediate CAs), fixed in 2026.10.18.
-#   playwright: 1.64.0 bundles Node 24.21.0 (CVE-2026-111497, critical and on CISA's KEV list,
-#     plus four high CVEs); 1.64.1 bundles the fixed Node 24.22.1.
-exclude-newer-package = { certifi = "2026-10-21T00:00:00Z", playwright = "2026-10-23T00:00:00Z" }
+#   oauthlib (via apprise > requests-oauthlib): CVE-2026-49272 / GHSA-3jp2-3mrg-2vxc (bearer
+#     token obtainable with only a client ID in the device flow), fixed in 4.0.1.
+exclude-newer-package = { oauthlib = "2026-11-01T00:00:00Z" }
 
 [tool.ruff]
 line-length = 100
