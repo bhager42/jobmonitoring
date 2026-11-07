@@ -3,6 +3,19 @@
 All notable changes to Job Monitor. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.4] - 2026-11-07
+
+### Security
+- **oauthlib 4.0.1** fixes CVE-2026-49272 (GHSA-3jp2-3mrg-2vxc): in the OAuth device flow, a
+  bearer token could be obtained with only a valid client ID. oauthlib comes in through Apprise.
+  Job Monitor doesn't issue OAuth tokens, so it most likely wasn't exploitable here, but the
+  vulnerable version is no longer in the image.
+
+### Changed
+- Updated dependencies: FastAPI 0.162.0, Starlette 1.10.0, SQLAlchemy 2.1.6, Alembic 1.20.1,
+  selectolax 1.0.2, pydantic-settings 2.16.1, certifi 2026.10.23, Markdown 3.11.2 and
+  websockets 17.3.
+
 ## [1.0.3] - 2026-10-31
 
 ### Fixed
@@ -84,5 +97,8 @@ First release, licensed under the GNU Affero General Public License v3.0 or late
 - **Images** `ghcr.io/bhager42/jobmonitoring` (with browser) and `-lite` (without), for linux/amd64.
 - `jobmonitor` command: `serve`, `migrate`, `reset-password`, `probe <url>`.
 
+[1.0.4]: https://github.com/bhager42/jobmonitoring/releases/tag/v1.0.4
+[1.0.3]: https://github.com/bhager42/jobmonitoring/releases/tag/v1.0.3
+[1.0.2]: https://github.com/bhager42/jobmonitoring/releases/tag/v1.0.2
 [1.0.1]: https://github.com/bhager42/jobmonitoring/releases/tag/v1.0.1
 [1.0.0]: https://github.com/bhager42/jobmonitoring/releases/tag/v1.0.0
