@@ -1,0 +1,12 @@
+# Grype reads this file from the repository root in CI (anchore/scan-action).
+# Every ignore must name the exact package version, say why it doesn't apply, and be removed
+# once a fixed version is available.
+ignore:
+  # CVE-2026-119170: hashlib FIPS-enforcement regression in CPython 3.14.10 only. It affects
+  # OpenSSL in FIPS mode, which this image never enables. Grype lists 3.14.11 as the fix, but
+  # 3.14.11 wasn't released as of 2026-11-12. The base image's floating `3.14` tag will pick it
+  # up, which stops this rule matching; delete the rule then.
+  - vulnerability: CVE-2026-119170
+    package:
+      name: python
+      version: 3.14.10

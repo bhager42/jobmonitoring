@@ -61,6 +61,9 @@ every Dependabot `uv` update fail.)
 - **Security fixes skip the two-week rule.** Add the package to `exclude-newer-package` in
   `pyproject.toml` with a comment naming the advisory. Then run
   `uv lock --upgrade-package <name>` and `uv sync`. Remove the entry once it is over 14 days old.
+- **A Grype finding with no released fix** (e.g. a base-image CPython CVE where Grype names an
+  unreleased version) goes in `.grype.yaml`. Pin the exact package version, explain why it doesn't
+  apply, and delete the rule once the fix ships.
 - Dependabot's 14-day cooldown applies to version updates only; security updates are not delayed.
   They need Dependabot alerts and security updates turned on in the repository settings.
 - To audit locally: `uv export --locked --all-groups --no-emit-project --no-hashes -o /tmp/req.txt`,
