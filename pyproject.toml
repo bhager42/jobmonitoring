@@ -58,11 +58,8 @@ packages = ["app"]
 # uv.lock, so `--locked` stays valid as time passes); Dependabot's cooldown is one day longer, so
 # every version it proposes is already inside this window.
 exclude-newer = "14 days"
-# Security exceptions to the two-week rule. Each entry names the advisory; remove the entry once
-# it is more than 14 days old (the rolling window then covers it).
-#   oauthlib (via apprise > requests-oauthlib): CVE-2026-49272 / GHSA-3jp2-3mrg-2vxc (bearer
-#     token obtainable with only a client ID in the device flow), fixed in 4.0.1.
-exclude-newer-package = { oauthlib = "2026-11-01T00:00:00Z" }
+# Security exceptions to the two-week rule go in `exclude-newer-package`. Each entry names the
+# advisory; remove the entry once it is more than 14 days old (the rolling window then covers it).
 
 [tool.ruff]
 line-length = 100
