@@ -37,7 +37,7 @@ dev = [
     "hypothesis>=6.169.2",
     "pyright",
     "pytest",
-    "pytest-asyncio>=1.4.0",
+    "pytest-asyncio>=1.4.1",
     "pytest-cov",
     "respx>=0.23.1",
     "ruff",
