@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.13"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -883,7 +883,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "regex", specifier = ">=2026.9.29" },
     { name = "selectolax", specifier = ">=1.0.0" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.1.4" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.1.6" },
     { name = "uvicorn", extras = ["standard"] },
 ]
 provides-extras = ["browser"]
