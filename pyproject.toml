@@ -19,7 +19,7 @@ dependencies = [
     "httpx[http2]>=0.28.1",
     "selectolax>=1.0.0",
     "regex>=2026.9.29",
-    "apprise>=2.0.1",
+    "apprise>=2.1.0",
     "cryptography>=50.0.2",
 ]
 
