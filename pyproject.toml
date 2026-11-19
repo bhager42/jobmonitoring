@@ -10,7 +10,7 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "pydantic-settings",
-    "sqlalchemy[asyncio]>=2.1.4",
+    "sqlalchemy[asyncio]>=2.1.6",
     "aiosqlite>=0.22.1",
     "alembic>=1.20.0",
     "argon2-cffi>=25.1.0",
