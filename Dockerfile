@@ -31,8 +31,11 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PORT=8080
 COPY --from=build /app/.venv /app/.venv
 # Headless shell only: the full Chromium build is not needed for headless use.
+# Playwright's bundled Node.js (26+) needs libatomic before it can run `install --with-deps`.
 RUN if [ "$WITH_BROWSER" = "true" ]; then \
-      playwright install --with-deps --only-shell chromium \
+      apt-get update \
+      && apt-get install -y --no-install-recommends libatomic1 \
+      && playwright install --with-deps --only-shell chromium \
       && rm -rf /var/lib/apt/lists/* \
       && chmod -R a+rX /ms-playwright; \
     fi
