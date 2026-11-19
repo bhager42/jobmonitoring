@@ -3,6 +3,13 @@
 All notable changes to Job Monitor. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.6] - 2026-11-19
+
+### Changed
+- Updated dependencies: Apprise 2.1.0, SQLAlchemy 2.1.8, Pydantic 2.14.2, pydantic-settings
+  2.16.2, AnyIO 4.16.0, python-multipart 0.0.33, websockets 17.4 and tzdata 2026.6. None of
+  these are security fixes.
+
 ## [1.0.5] - 2026-11-14
 
 ### Security
@@ -106,6 +113,7 @@ First release, licensed under the GNU Affero General Public License v3.0 or late
 - **Images** `ghcr.io/bhager42/jobmonitoring` (with browser) and `-lite` (without), for linux/amd64.
 - `jobmonitor` command: `serve`, `migrate`, `reset-password`, `probe <url>`.
 
+[1.0.6]: https://github.com/bhager42/jobmonitoring/releases/tag/v1.0.6
 [1.0.5]: https://github.com/bhager42/jobmonitoring/releases/tag/v1.0.5
 [1.0.4]: https://github.com/bhager42/jobmonitoring/releases/tag/v1.0.4
 [1.0.3]: https://github.com/bhager42/jobmonitoring/releases/tag/v1.0.3
