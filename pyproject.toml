@@ -60,6 +60,9 @@ packages = ["app"]
 exclude-newer = "14 days"
 # Security exceptions to the two-week rule go in `exclude-newer-package`. Each entry names the
 # advisory; remove the entry once it is more than 14 days old (the rolling window then covers it).
+#   playwright: its bundled Node.js 24.22.1 has CVE-2026-123863..123875 and CVE-2026-126051 (high).
+#   1.65.1+ bundles Node 26.13.1, which fixes them. Remove after 2026-11-28.
+exclude-newer-package = { playwright = "2026-11-19T00:00:00Z" }
 
 [tool.ruff]
 line-length = 100

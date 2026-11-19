@@ -5,10 +5,17 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [1.0.6] - 2026-11-19
 
+### Security
+- **Playwright 1.65.2** (full image only) replaces the Node.js 24.22.1 runtime it bundles with
+  Node.js 26.13.1, which fixes several high-severity Node.js vulnerabilities (CVE-2026-126051 and
+  CVE-2026-123863 to CVE-2026-123875). Playwright uses this runtime only to drive the headless
+  browser, never to run content from the sites it loads, so Job Monitor most likely wasn't
+  exposed, but the vulnerable version is no longer in the image. The `-lite` image never
+  included it.
+
 ### Changed
 - Updated dependencies: Apprise 2.1.0, SQLAlchemy 2.1.8, Pydantic 2.14.2, pydantic-settings
-  2.16.2, AnyIO 4.16.0, python-multipart 0.0.33, websockets 17.4 and tzdata 2026.6. None of
-  these are security fixes.
+  2.16.2, AnyIO 4.16.0, python-multipart 0.0.33, websockets 17.4 and tzdata 2026.6.
 
 ## [1.0.5] - 2026-11-14
 
