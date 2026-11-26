@@ -18,7 +18,7 @@ dependencies = [
     "python-multipart>=0.0.32",
     "httpx[http2]>=0.28.1",
     "selectolax>=1.0.0",
-    "regex>=2026.9.29",
+    "regex>=2026.11.9",
     "apprise>=2.0.1",
     "cryptography>=50.0.2",
 ]
